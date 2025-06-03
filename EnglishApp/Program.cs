@@ -1,6 +1,8 @@
 using CloudinaryDotNet;
 using EnglishApp.Data;
 using EnglishApp.Model;
+using EnglishApp.Repository;
+using EnglishApp.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -48,7 +50,15 @@ builder.Configuration["CloudinarySettings:ApiSecret"] = Environment.GetEnvironme
 
 builder.Services.AddDbContext<EnglishAppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("MyDB")));
 builder.Services.AddIdentity<User, Role>()
-    .AddEntityFrameworkStores<EnglishAppDbContext>().AddDefaultTokenProviders(); 
+    .AddEntityFrameworkStores<EnglishAppDbContext>().AddDefaultTokenProviders();
+
+
+
+
+builder.Services.AddScoped<AuthenticationRepository, AuthenticationService>();
+
+
+
 
 builder.Services.AddSingleton(option =>
 {

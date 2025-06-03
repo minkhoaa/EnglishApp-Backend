@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Razor.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Policy;
 namespace EnglishApp.Data
@@ -24,6 +25,9 @@ namespace EnglishApp.Data
         public DbSet<UserToken> UserTokens {get;set; }
         public DbSet<RoleClaim> RoleClaims {get; set; }
 
+
+        public DbSet<TempOtp> TempOtps { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder) 
         {
             base.OnModelCreating(builder);
@@ -34,7 +38,15 @@ namespace EnglishApp.Data
             builder.Entity<UserLogin>().ToTable("userlogins");
             builder.Entity<UserToken>().ToTable("usertokens");
             builder.Entity<RoleClaim>().ToTable("roleclaims");
-            
+            builder.Entity<TempOtp>().ToTable("tempotp");
+
+            builder.Entity<TempOtp>()
+                .HasKey(x => x.Email);
+
+
+
+
+
             builder.Entity<UserRole>()
                 .HasKey(x=> new {x.UserId, x.RoleId});
             builder.Entity<UserRole>()
