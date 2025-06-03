@@ -1,5 +1,6 @@
 ﻿using EnglishApp.Data;
 using EnglishApp.Model;
+using Microsoft.AspNetCore.Identity.Data;
 using System.Diagnostics.Eventing.Reader;
 using System.IO.Pipelines;
 using System.Security.Policy;
@@ -13,6 +14,10 @@ namespace EnglishApp.Repository
         public Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel);
 
         public Task<ApiResponse> Login(LoginModel loginModel);
+
+        public Task<ApiResponse> ForgotPassword(ForgotPasswordRequest email);
+
+        public Task<ApiResponse> ResetPassword(ResetPasswordRequest resetPasswordModel); 
 
     }
 }
