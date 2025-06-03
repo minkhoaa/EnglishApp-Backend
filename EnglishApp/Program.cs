@@ -1,11 +1,98 @@
+using CloudinaryDotNet;
+using EnglishApp.Data;
+using EnglishApp.Model;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.Net;
+using System.Security.Authentication.ExtendedProtection;
+using System.Text;
+
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+
+
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
+
+
+DotNetEnv.Env.Load();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddCors(option => option.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+builder.Configuration["ConnectionStrings:MyDB"] = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__MYDB");
+
+
+builder.Configuration["JWT:ValidAudience"] = Environment.GetEnvironmentVariable("JWT__VALIDAUDIENCE");
+builder.Configuration["JWT:ValidIssuer"] = Environment.GetEnvironmentVariable("JWT__VALIDISSUER");
+builder.Configuration["JWT:SecretKey"] = Environment.GetEnvironmentVariable("JWT__SECRETKEY");
+
+builder.Configuration["EmailSettings:SmtpServer"] = Environment.GetEnvironmentVariable("EMAILSETTINGS__SMTPSERVER");
+builder.Configuration["EmailSettings:SmtpPort"] = Environment.GetEnvironmentVariable("EMAILSETTINGS__SMTPPORT");
+builder.Configuration["EmailSettings:SenderEmail"] = Environment.GetEnvironmentVariable("EMAILSETTINGS__SENDEREMAIL");
+builder.Configuration["EmailSettings:SenderPassword"] = Environment.GetEnvironmentVariable("EMAILSETTINGS__SENDERPASSWORD");
+builder.Configuration["EmailSettings:EnableSSL"] = Environment.GetEnvironmentVariable("EMAILSETTINGS__ENABLESSL");
+
+builder.Configuration["CloudinarySettings:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__CLOUDNAME");
+builder.Configuration["CloudinarySettings:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APIKEY");
+builder.Configuration["CloudinarySettings:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APISECRET");
+
+builder.Services.AddDbContext<EnglishAppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("MyDB")));
+builder.Services.AddIdentity<User, Role>()
+    .AddEntityFrameworkStores<EnglishAppDbContext>().AddDefaultTokenProviders(); 
+
+builder.Services.AddSingleton(option =>
+{
+    var settings = option.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+    var account = new Account(
+        settings.CloudName,
+        settings.ApiKey,
+        settings.ApiSecret
+        );
+    return new Cloudinary(account);
+});
+
+builder.Services.AddAuthentication(option =>
+{
+    option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    option.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(option =>
+{
+    option.SaveToken = true;
+    option.RequireHttpsMetadata = false;
+    option.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["JWT:ValidAudience"],
+        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"]!))
+    };
+});
+
+
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
+var emailConfigs = builder.Configuration.GetSection("EmailSettings").Get<EmailSettings>();
+
+builder.Services.AddFluentEmail(emailConfigs!.SenderEmail, "no reply")
+    .AddSmtpSender(new System.Net.Mail.SmtpClient(emailConfigs.SmtpServer)
+    {
+        Port = emailConfigs.SmtpPort,
+        Credentials = new NetworkCredential(emailConfigs.SenderEmail, emailConfigs.SenderPassword),
+        EnableSsl = emailConfigs.EnableSSL
+    });
+
 
 var app = builder.Build();
 
@@ -15,9 +102,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors();
 
 app.Run();
