@@ -1,4 +1,5 @@
 using CloudinaryDotNet;
+using EnglishApp;
 using EnglishApp.Data;
 using EnglishApp.Model;
 using EnglishApp.Repository;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Net;
 using System.Security.Authentication.ExtendedProtection;
 using System.Text;
@@ -28,7 +30,32 @@ builder.Services.AddEndpointsApiExplorer();
 
 
 DotNetEnv.Env.Load();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "EnglishApp API", Version = "v1" });
+
+    var jwtScheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Description = "Nhập JWT Bearer token (chỉ phần token, không kèm 'Bearer ').",
+        Reference = new OpenApiReference
+        {
+            Id = JwtBearerDefaults.AuthenticationScheme, // "Bearer"
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+    c.AddSecurityDefinition(jwtScheme.Reference.Id, jwtScheme);
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { jwtScheme, Array.Empty<string>() }
+    });
+});
+
 
 builder.Services.AddCors(option => option.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 builder.Configuration["ConnectionStrings:MyDB"] = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__MYDB");
@@ -56,7 +83,8 @@ builder.Services.AddIdentity<User, Role>()
 
 
 builder.Services.AddScoped<AuthenticationRepository, AuthenticationService>();
-
+builder.Services.AddScoped<LessonRepository,  LessonService>();
+builder.Services.AddScoped<CategoryRepository, CategoryService>();
 
 
 
@@ -107,14 +135,13 @@ builder.Services.AddFluentEmail(emailConfigs!.SenderEmail, "no reply")
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+
+
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapControllers();
 
 app.UseCors();

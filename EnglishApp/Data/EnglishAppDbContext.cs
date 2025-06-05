@@ -32,6 +32,7 @@ namespace EnglishApp.Data
         public DbSet<UserLessonProgress> UserLessonProgresses { get; set; }
         public DbSet<UserExerciseResult> UserExerciseResults { get; set; }
 
+        public DbSet<UserInfo> UserInfo { get; set; }
 
         public DbSet<TempOtp> TempOtps { get; set; }
 

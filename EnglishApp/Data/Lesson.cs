@@ -10,14 +10,14 @@ namespace EnglishApp.Data
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int LessonId { get; set; }
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
         public string Descripton { get; set; } = string.Empty;
 
         public string Level { get; set; }
 
         public int CategoryId { get; set; }
 
-        public string MediaUrl { get; set; }
+        public string MediaUrl { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
 

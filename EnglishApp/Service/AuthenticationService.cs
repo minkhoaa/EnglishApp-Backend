@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.VisualBasic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Text;
 using static System.Net.WebRequestMethods;
@@ -197,9 +198,9 @@ namespace EnglishApp.Service
 
         }
 
-       
 
-      public async Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel)
+
+        public async Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel)
         {
             // 1. Lấy bản ghi TempOtp theo email
             var tempOtpEntity = await _context.TempOtps
@@ -235,45 +236,60 @@ namespace EnglishApp.Service
             }
 
 
-            var user = new User
+            try
             {
-                UserName = tempOtpEntity.Email,
-                Email = tempOtpEntity.Email,
-                EmailConfirmed = true   
-            };
+                var user = new User
+                {
+                    UserName = tempOtpEntity.Email,
+                    Email = tempOtpEntity.Email,
+                    EmailConfirmed = true
+                };
 
-            var plainPassword = tempOtpEntity.Password; 
+                var plainPassword = tempOtpEntity.Password;
 
-            var createResult = await _userManager.CreateAsync(user, plainPassword!);
-            if (!createResult.Succeeded)
-            {
-                var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
+                var createResult = await _userManager.CreateAsync(user, plainPassword!);
+
+                if (!createResult.Succeeded)
+                {
+                    var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
+                    return new ApiResponse
+                    {
+                        Success = false,
+                        Message = "Khởi tạo tài khoản thất bại: " + errors
+                    };
+                }
+
+                // 5. Gán Role "User"
+                const string defaultRole = "User";
+                if (!await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    await _roleManager.CreateAsync(new Role { Name = defaultRole });
+                }
+                await _userManager.AddToRoleAsync(user, defaultRole);
+                var userInfo = new UserInfo
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Birthday = new DateTime(1970, 1, 1).ToUniversalTime()
+                };
+                await _context.UserInfo.AddAsync(userInfo);
+
+                _context.TempOtps.Remove(tempOtpEntity);
+                await _context.SaveChangesAsync();
+
+                // 7. Trả về thông tin user
                 return new ApiResponse
                 {
-                    Success = false,
-                    Message = "Khởi tạo tài khoản thất bại: " + errors
+                    Success = true,
+                    Message = "Đăng ký thành công!",
+                    Data = new { user.Id, user.Email, user.UserName }
                 };
             }
-
-            // 5. Gán Role "User"
-            const string defaultRole = "User";
-            if (!await _roleManager.RoleExistsAsync(defaultRole))
+            catch (Exception ex)
             {
-                await _roleManager.CreateAsync(new Role { Name = defaultRole });
+                return new ApiResponse {Success =false, Message ="Tạo mới tài khoản thất bại, mã lỗi: "+  ex.Message};
             }
-            await _userManager.AddToRoleAsync(user, defaultRole);
-
-            // 6. Xóa bản ghi TempOtp (không cần giữ nữa)
-            _context.TempOtps.Remove(tempOtpEntity);
-            await _context.SaveChangesAsync();
-
-            // 7. Trả về thông tin user
-            return new ApiResponse
-            {
-                Success = true,
-                Message = "Đăng ký thành công!",
-                Data = new { user.Id, user.Email, user.UserName }
-            };
+        
         }
 
         public async Task<ApiResponse> SignUpSentOtp(SignUpModel signupModel)
@@ -301,9 +317,6 @@ namespace EnglishApp.Service
 
             var otp = new Random().Next(100000, 999999).ToString();
 
-            var passwordHasher = new PasswordHasher<User>();
-            var tempUserForHash = new User { Email = signupModel.Email, UserName = signupModel.Email };
-            var passwordHash = passwordHasher.HashPassword(tempUserForHash, signupModel.Password);
 
             var existedOtp = await _context.TempOtps.AnyAsync(x => x.Email == signupModel.Email);
             if (!existedOtp)
@@ -312,7 +325,7 @@ namespace EnglishApp.Service
                 {
                     Email = signupModel.Email,
                     Otp = otp,
-                    Password = passwordHash,
+                    Password = signupModel.Password,
                     Expiration = DateTime.UtcNow.AddMinutes(5)
                 };
                 await _context.TempOtps.AddAsync(tempOtpEntity);
@@ -323,7 +336,7 @@ namespace EnglishApp.Service
                     .Where(x => x.Email == signupModel.Email)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.Otp, otp)
-                        .SetProperty(x => x.Password, passwordHash)
+                        .SetProperty(x => x.Password, signupModel.Password)
                         .SetProperty(x => x.Expiration, DateTime.UtcNow.AddMinutes(5))
                     );
             }

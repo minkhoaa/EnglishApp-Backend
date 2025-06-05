@@ -7,7 +7,7 @@ namespace EnglishApp.Data
         [Key]
         public int UserId{ get; set; }
         public string FullName { get; set; } = string.Empty;
-        public DateTime Birthday{ get; set; } 
+        public DateTime Birthday { get; set; } 
 
         public string Email { get; set; } = string.Empty;
         public string NumberPhone { get; set; } = string.Empty;
