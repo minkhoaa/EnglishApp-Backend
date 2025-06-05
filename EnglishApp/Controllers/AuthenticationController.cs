@@ -49,13 +49,13 @@ namespace EnglishApp.Controllers
         public async Task<IActionResult> SendResetPasswordCode(ForgotPasswordRequest forgotPasswordRequest)
         {
             var result = await _authentication.ForgotPassword(forgotPasswordRequest);
-            return (result == null) ? NotFound(result) : Ok(result);
+            return (!result.Success) ? NotFound(result) : Ok(result);
         }
         [HttpPost("resetpassword")]
         public async Task<IActionResult> ResetPassword(ResetPasswordRequest resetPasswordRequest)
         {
             var result = await _authentication.ResetPassword(resetPasswordRequest);
-            return (result == null) ? NotFound(result) : Ok(result);
+            return (!result.Success) ? NotFound(result) : Ok(result);
         }
     }
     

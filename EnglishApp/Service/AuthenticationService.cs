@@ -103,10 +103,15 @@ namespace EnglishApp.Service
             await _context.SaveChangesAsync();
             try
             {
+                var emailBody = $@"
+                                <p>Chào {request.Email},</p>
+                                <p>Mã OTP của bạn là: <strong>{otp}</strong></p>
+                                <p>Mã này sẽ hết hạn sau 5 phút.</p>
+                                <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>";
                 await _fluentEmail
                     .To(request.Email)
                     .Subject("Mã xác nhận đặt lại mật khẩu")
-                    .Body($"Mã OTP của bạn là: <strong>{otp}</strong>. Mã này sẽ hết hạn sau 5 phút.", true)
+                    .Body(emailBody, isHtml:true)
                     .SendAsync();
                 return new ApiResponse { Success = true, Message = "Gửi mã đặt lại mật khẩu thành công" };
             }
@@ -194,139 +199,167 @@ namespace EnglishApp.Service
 
        
 
-        public async Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel)
+      public async Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel)
         {
-           var otp = await _context.TempOtps.AsNoTracking().FirstOrDefaultAsync(x=>x.Email == confirmOtpModel.Email);
-            if (otp == null) {
-                return new ApiResponse
-                {
-                    Success = false,
-                    Message = "Vui lòng nhập đúng email"
-                };
-                
-            }
-            if (otp.Otp != confirmOtpModel.Otp)
-            {
-                return new ApiResponse
-                {
-                    Success = false,
-                    Message = "Otp sai, vui lòng nhập lại"
-                };
-            }
-            if (otp.Expiration < DateTime.UtcNow) {
-                return new ApiResponse
-                {
-                    Success = false,
-                    Message = "Otp đã hết hạn"
-                };
-            }
-            using var transction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                var user = new User
-                {
-                    UserName = otp.Email,
-                    Email = otp.Email,
-                    EmailConfirmed = true
-                };
-                var result = await _userManager.CreateAsync(user, otp.Password!);
-                if (!result.Succeeded)
-                {
-                    await transction.RollbackAsync();
-                    return new ApiResponse
-                    {
+            // 1. Lấy bản ghi TempOtp theo email
+            var tempOtpEntity = await _context.TempOtps
+                .FirstOrDefaultAsync(x => x.Email == confirmOtpModel.Email);
 
-                        Success = false,
-                        Message = "Đăng kí tài khoản không thành công"
-                    };
-                }
-                if (!await _roleManager.RoleExistsAsync(RoleModel.User))
-                {
-                    var role = new Role { Name = RoleModel.User };
-                    await _roleManager.CreateAsync(role);
-                }
-                await _userManager.AddToRoleAsync(user, RoleModel.User);
-                await _context.TempOtps
-                    .Where(x => x.Email == otp.Email)
-                    .ExecuteDeleteAsync();
-                await _context.SaveChangesAsync();
-                await transction.CommitAsync();
-                return new ApiResponse
-                {
-                    Success = true,
-                    Message = "Tạo tài khoản thành công",
-                    Data = new { user.Id, user.Email, user.UserName }
-                };
-            }catch
+            if (tempOtpEntity == null)
             {
-                await transction.RollbackAsync();
                 return new ApiResponse
                 {
                     Success = false,
-                    Message = "Failed to sign up user with otp for email " + confirmOtpModel.Email
+                    Message = "Không tìm thấy yêu cầu đăng ký. Vui lòng làm lại từ đầu."
                 };
             }
 
+            // 2. Kiểm tra OTP có đúng không
+            if (tempOtpEntity.Otp != confirmOtpModel.Otp)
+            {
+                return new ApiResponse
+                {
+                    Success = false,
+                    Message = "OTP không chính xác. Vui lòng nhập lại."
+                };
+            }
+
+            // 3. Kiểm tra có hết hạn không
+            if (tempOtpEntity.Expiration < DateTime.UtcNow)
+            {
+                return new ApiResponse
+                {
+                    Success = false,
+                    Message = "OTP đã hết hạn. Vui lòng yêu cầu lại."
+                };
+            }
+
+
+            var user = new User
+            {
+                UserName = tempOtpEntity.Email,
+                Email = tempOtpEntity.Email,
+                EmailConfirmed = true   
+            };
+
+            var plainPassword = tempOtpEntity.Password; 
+
+            var createResult = await _userManager.CreateAsync(user, plainPassword!);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
+                return new ApiResponse
+                {
+                    Success = false,
+                    Message = "Khởi tạo tài khoản thất bại: " + errors
+                };
+            }
+
+            // 5. Gán Role "User"
+            const string defaultRole = "User";
+            if (!await _roleManager.RoleExistsAsync(defaultRole))
+            {
+                await _roleManager.CreateAsync(new Role { Name = defaultRole });
+            }
+            await _userManager.AddToRoleAsync(user, defaultRole);
+
+            // 6. Xóa bản ghi TempOtp (không cần giữ nữa)
+            _context.TempOtps.Remove(tempOtpEntity);
+            await _context.SaveChangesAsync();
+
+            // 7. Trả về thông tin user
+            return new ApiResponse
+            {
+                Success = true,
+                Message = "Đăng ký thành công!",
+                Data = new { user.Id, user.Email, user.UserName }
+            };
         }
+
         public async Task<ApiResponse> SignUpSentOtp(SignUpModel signupModel)
         {
-            var exisitedUuser = await _userManager.FindByEmailAsync(signupModel.Email);
-            if (exisitedUuser != null)
-            {
-                return new ApiResponse
-                {
-                    Success = false,
-                    Message = "Email này đã được sử dụng",
-                    Data = null!
-                };
-            }
+            // 1. Kiểm tra password & confirmPassword có khớp không
             if (signupModel.Password != signupModel.ConfirmPassword)
             {
                 return new ApiResponse
                 {
                     Success = false,
-                    Message = "Xác nhận mật khẩu sai"
+                    Message = "Mật khẩu và xác nhận mật khẩu không khớp."
                 };
             }
-            var existedOtp = await _context.TempOtps.AnyAsync(x => x.Email == signupModel.Email);
-            string otp = new Random().Next(100000, 999999).ToString();
 
+            // 2. Kiểm tra email đã tồn tại trong Identity chưa
+            var existingUser = await _userManager.FindByEmailAsync(signupModel.Email);
+            if (existingUser != null)
+            {
+                return new ApiResponse
+                {
+                    Success = false,
+                    Message = "Email này đã được sử dụng."
+                };
+            }
+
+            var otp = new Random().Next(100000, 999999).ToString();
+
+            var passwordHasher = new PasswordHasher<User>();
+            var tempUserForHash = new User { Email = signupModel.Email, UserName = signupModel.Email };
+            var passwordHash = passwordHasher.HashPassword(tempUserForHash, signupModel.Password);
+
+            var existedOtp = await _context.TempOtps.AnyAsync(x => x.Email == signupModel.Email);
             if (!existedOtp)
             {
-                await _context.AddAsync(new TempOtp
+                var tempOtpEntity = new TempOtp
                 {
                     Email = signupModel.Email,
                     Otp = otp,
-                    Expiration = DateTime.UtcNow.AddMinutes(5),
-                    Password = signupModel.Password,
-                });
+                    Password = passwordHash,
+                    Expiration = DateTime.UtcNow.AddMinutes(5)
+                };
+                await _context.TempOtps.AddAsync(tempOtpEntity);
             }
             else
             {
                 await _context.TempOtps
                     .Where(x => x.Email == signupModel.Email)
                     .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.Otp, otp)
-                    .SetProperty(x => x.Expiration, DateTime.UtcNow.AddMinutes(5))
+                        .SetProperty(x => x.Otp, otp)
+                        .SetProperty(x => x.Password, passwordHash)
+                        .SetProperty(x => x.Expiration, DateTime.UtcNow.AddMinutes(5))
                     );
             }
+
             await _context.SaveChangesAsync();
-            await _fluentEmail
-                .To(signupModel.Email)
-                .Subject("Mã OTP xác thực email")
-                .Body($"<p>Mã OTP của bạn là: <strong>{otp}</strong> (hiệu lực trong 5 phút).</p>", true)
-                .SendAsync()
-                ;
-            return new ApiResponse
+
+            // 6. Gửi OTP qua email
+            var emailBody = $@"
+                <p>Chào {signupModel.Email},</p>
+                <p>Mã OTP của bạn là: <strong>{otp}</strong></p>
+                <p>Mã này sẽ hết hạn sau 5 phút.</p>
+                <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>";
+
+            try
             {
-                Success = true,
-                Message = "Đã gửi otp thành công"
-            };
+                await _fluentEmail
+                    .To(signupModel.Email)
+                    .Subject("Mã OTP xác thực đăng ký")
+                    .Body(emailBody, isHtml: true)
+                    .SendAsync();
 
-
+                return new ApiResponse
+                {
+                    Success = true,
+                    Message = "Đã gửi mã OTP đến email của bạn. Vui lòng kiểm tra để tiếp tục đăng ký."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse
+                {
+                    Success = false,
+                    Message = "Gửi email thất bại: " + ex.Message
+                };
+            }
         }
-    
 
-     
     }
 }

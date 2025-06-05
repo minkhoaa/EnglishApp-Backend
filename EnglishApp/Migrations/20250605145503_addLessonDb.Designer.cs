@@ -3,6 +3,7 @@ using System;
 using EnglishApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnglishApp.Migrations
 {
     [DbContext(typeof(EnglishAppDbContext))]
-    partial class EnglishAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250605145503_addLessonDb")]
+    partial class addLessonDb
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -383,47 +386,6 @@ namespace EnglishApp.Migrations
                     b.ToTable("userexerciseresult", (string)null);
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.UserInfo", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("AvatarUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Bio")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("Birthday")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Gender")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("NumberPhone")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("userinfo", (string)null);
-                });
-
             modelBuilder.Entity("EnglishApp.Data.UserLessonProgress", b =>
                 {
                     b.Property<int>("LessonId")
@@ -593,17 +555,6 @@ namespace EnglishApp.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.UserInfo", b =>
-                {
-                    b.HasOne("EnglishApp.Data.User", "User")
-                        .WithOne("UserInfo")
-                        .HasForeignKey("EnglishApp.Data.UserInfo", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("EnglishApp.Data.UserLessonProgress", b =>
                 {
                     b.HasOne("EnglishApp.Data.Lesson", "Lesson")
@@ -696,9 +647,6 @@ namespace EnglishApp.Migrations
                     b.Navigation("ExerciseResults");
 
                     b.Navigation("LessonProgresses");
-
-                    b.Navigation("UserInfo")
-                        .IsRequired();
 
                     b.Navigation("UserRoles");
                 });
