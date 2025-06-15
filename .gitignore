@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /EnglishApp/.env
 /EnglishApp/appsettings.Development.json
+/EnglishApp/docker-compose.yml
+/EnglishApp/deploy.ps1

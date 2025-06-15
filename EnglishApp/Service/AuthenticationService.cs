@@ -25,21 +25,25 @@ namespace EnglishApp.Service
         private readonly RoleManager<Role> _roleManager;
         private readonly IFluentEmail _fluentEmail;
         private readonly IConfiguration _configuration;
+        private readonly TokenRepository _tokenGenerator;
         public AuthenticationService(EnglishAppDbContext englishAppDbContext,
             UserManager<User> userManager,
             SignInManager<User> signInManager,
             RoleManager<Role> roleManager,
             IFluentEmail fluentEmail,
-            IConfiguration configuration
+            IConfiguration configuration,
+            TokenRepository tokenGenerator
 
 
-            ) {
+            )
+        {
             _configuration = configuration;
             _context = englishAppDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _fluentEmail = fluentEmail;
+            _tokenGenerator = tokenGenerator;
         }
         public async Task<User> AuthenticateAsync(TokenModel token)
         {
@@ -157,6 +161,53 @@ namespace EnglishApp.Service
                 signingCredentials: new SigningCredentials(authenKey, SecurityAlgorithms.HmacSha256Signature)
                 );
             return new ApiResponse { Success = true, Message = "Đăng nhập thành công", Data = new JwtSecurityTokenHandler().WriteToken(token) };
+        }
+
+        public async Task<ApiResponse> LoginWithGoogleAsync(IEnumerable<Claim> claims)
+        {
+            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            if (email == null)
+                throw new Exception("Không lấy được email từ Google Claims!");
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                    throw new Exception($"Tạo user thất bại: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+
+                // Gán role mặc định (nếu cần)
+                await _userManager.AddToRoleAsync(user, "User");
+            }
+
+            var existingClaims = await _userManager.GetClaimsAsync(user);
+            // Xóa toàn bộ claims cũ nếu muốn sync lại:
+            foreach (var c in existingClaims)
+                await _userManager.RemoveClaimAsync(user, c);
+
+            foreach (var claim in claims)
+            {
+                // Loại trừ một số claim hệ thống nếu muốn, ví dụ "sub", hoặc chỉ lưu claim Google (tùy ý)
+                await _userManager.AddClaimAsync(user, claim);
+            }
+
+            // 6. Tạo JWT
+            var token = _tokenGenerator.GenerateToken(user);
+
+            return new ApiResponse
+            {
+               Success = true,
+               Message = "Login Success",
+               Data = token
+            };
         }
 
         public async Task<ApiResponse> ResetPassword(ResetPasswordRequest resetPasswordModel)

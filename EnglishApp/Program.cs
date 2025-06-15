@@ -4,6 +4,7 @@ using EnglishApp.Data;
 using EnglishApp.Model;
 using EnglishApp.Repository;
 using EnglishApp.Service;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -74,12 +75,13 @@ builder.Configuration["EmailSettings:EnableSSL"] = Environment.GetEnvironmentVar
 builder.Configuration["CloudinarySettings:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__CLOUDNAME");
 builder.Configuration["CloudinarySettings:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APIKEY");
 builder.Configuration["CloudinarySettings:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APISECRET");
-
+builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__ID"] = Environment.GetEnvironmentVariable("CLIENT__ID");
+builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__SECRET"] = Environment.GetEnvironmentVariable("CLIENT__SECRET");
 builder.Services.AddDbContext<EnglishAppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("MyDB")));
 builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<EnglishAppDbContext>().AddDefaultTokenProviders();
 
-
+builder.Services.AddScoped<TokenRepository, TokenGenerator>();
 
 
 builder.Services.AddScoped<AuthenticationRepository, AuthenticationService>();
@@ -98,26 +100,63 @@ builder.Services.AddSingleton(option =>
         );
     return new Cloudinary(account);
 });
-
-builder.Services.AddAuthentication(option =>
+builder.Services.AddAuthentication(options =>
 {
-    option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    option.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(option =>
+    // Đặt default scheme là PolicyScheme tự động nhận JWT hoặc Cookie
+    options.DefaultScheme = "JwtOrCookie";
+    options.DefaultAuthenticateScheme = "JwtOrCookie";
+    options.DefaultChallengeScheme = "JwtOrCookie";
+})
+.AddPolicyScheme("JwtOrCookie", "JWT or Cookie", options =>
 {
-    option.SaveToken = true;
-    option.RequireHttpsMetadata = false;
-    option.TokenValidationParameters = new TokenValidationParameters
+    options.ForwardDefaultSelector = context =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+        // Nếu có header Bearer thì dùng JWT
+        var hasBearer = context.Request.Headers["Authorization"].FirstOrDefault()?.StartsWith("Bearer ") == true;
+        if (hasBearer)
+            return JwtBearerDefaults.AuthenticationScheme;
+
+        if (context.Request.Cookies.ContainsKey(".AspNetCore.Cookies"))
+            return CookieAuthenticationDefaults.AuthenticationScheme;
+
+        return CookieAuthenticationDefaults.AuthenticationScheme;
+    };
+})
+.AddCookie()
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuer = false,
+        ValidateAudience = false,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"]!))
     };
-});
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                message = "Vui lòng đăng nhập"
+            });
 
+            return context.Response.WriteAsync(result);
+        }
+    };
+})
+.AddGoogle(google =>
+{
+    google.ClientId = builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__ID"] ?? Environment.GetEnvironmentVariable("GOOGLE__CLIENT__ID")!;
+    google.ClientSecret = builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__SECRET"] ?? Environment.GetEnvironmentVariable("GOOGLE__CLIENT__SECRET")!;
+    google.CallbackPath = "/signin-google";
+    google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+});
+builder.Services.AddAuthorization();
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
@@ -129,7 +168,8 @@ builder.Services.AddFluentEmail(emailConfigs!.SenderEmail, "no reply")
         Port = emailConfigs.SmtpPort,
         Credentials = new NetworkCredential(emailConfigs.SenderEmail, emailConfigs.SenderPassword),
         EnableSsl = emailConfigs.EnableSSL
-    });
+    }
+    );
 
 
 var app = builder.Build();

@@ -3,6 +3,7 @@ using EnglishApp.Dto.Request;
 using EnglishApp.Model;
 using EnglishApp.Repository;
 using EnglishApp.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,6 +25,7 @@ namespace EnglishApp.Controllers
             return Ok(result);
         }
         [HttpGet("getallcategories")]
+        [Authorize]
         public async Task<IActionResult> GetAllCategories()
         {
             var result = await _categoryRepository.GetAllCategoriesAsync();

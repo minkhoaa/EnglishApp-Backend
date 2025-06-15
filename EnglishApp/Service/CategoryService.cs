@@ -3,6 +3,7 @@ using EnglishApp.Dto.Request;
 using EnglishApp.Model;
 using EnglishApp.Repository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 
 namespace EnglishApp.Service
 {
@@ -18,7 +19,7 @@ namespace EnglishApp.Service
             var category = new Category()
             {
                 CategoryName = dto.CategoryName,
-                CategoryDescription = dto.CategoryDescription,
+                CategoryDescription = dto.CategoryDescription
             };
             await _context.Categories.AddAsync(category);
             await _context.SaveChangesAsync();  
@@ -27,7 +28,8 @@ namespace EnglishApp.Service
 
         public async Task<ApiResponse> GetAllCategoriesAsync()
         {
-            return new ApiResponse { Success = true, Message = "Success", Data = await _context.Categories.AsNoTracking().ToListAsync() };
+            return new ApiResponse()
+                { Success = false, Message = "Success", Data = await _context.Categories.ToListAsync() };
         }
     }
 }

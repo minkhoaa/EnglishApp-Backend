@@ -1,12 +1,14 @@
 ﻿using EnglishApp.Model;
 using EnglishApp.Repository;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using System.Net.NetworkInformation;
+using System.Security.Claims;
 
 namespace EnglishApp.Controllers
 {
@@ -15,6 +17,7 @@ namespace EnglishApp.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly AuthenticationRepository _authentication;
+
         public AuthenticationController(AuthenticationRepository authenticationRepository) {
         _authentication = authenticationRepository;
         
@@ -56,6 +59,29 @@ namespace EnglishApp.Controllers
         {
             var result = await _authentication.ResetPassword(resetPasswordRequest);
             return (!result.Success) ? NotFound(result) : Ok(result);
+        }
+        [HttpGet("signin-google")]
+        public IActionResult inGoogle(string returnUrl = "/api/Authentication/profile")
+        {
+            var properties = new AuthenticationProperties { RedirectUri = returnUrl };
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        }
+        [HttpGet("profile")]
+        public async Task<IActionResult> Profile()
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return Redirect("/auth/signin-google");
+            }
+
+            // Lấy thông tin từ claim của Google
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var name = User.FindFirst(ClaimTypes.Name)?.Value;
+         
+            var response = await _authentication.LoginWithGoogleAsync(User.Claims);
+
+            return Ok(response);
         }
     }
     
