@@ -1,5 +1,7 @@
-﻿using EnglishApp.Dto.Request;
+﻿using EnglishApp.Data;
+using EnglishApp.Dto.Request;
 using EnglishApp.Repository;
+using EnglishApp.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,28 +10,48 @@ using System.Security.Policy;
 
 namespace EnglishApp.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/lessons")]
     public class LessonController : ControllerBase
     {
-        private readonly LessonRepository _lessonRepository;
-        public LessonController(LessonRepository lessonRepository)
+        private readonly ILessonService _svc;
+        public LessonController(ILessonService svc) => _svc = svc;
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] int? categoryId, [FromQuery] string? level)
+            => Ok(await _svc.GetAllAsync(categoryId, level));
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            _lessonRepository = lessonRepository;  
+            var l = await _svc.GetByIdAsync(id);
+            return l == null ? NotFound() : Ok(l);
         }
 
-        [HttpPost("addnewlesson")]
-        public async Task<IActionResult> AddNewLesson(AddNewLessonDto dto)
+        [HttpGet("popular")]
+        public async Task<IActionResult> GetPopular() => Ok(await _svc.GetPopularAsync());
+
+        [HttpPost]
+        public async Task<IActionResult> Create(Lesson dto)
         {
-            var result = await _lessonRepository.AddNewLessonAsync(dto);
-            return (result.Success) ? Ok(result) : BadRequest(result);
+            var l = await _svc.AddAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = l.LessonId }, l);
         }
-        [HttpGet]
-        [Authorize]
-        public async Task<IActionResult> GetAllLessons()
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, Lesson dto)
         {
-            var result = await _lessonRepository.GetAllLessonAsync();
-            return Ok(result);
+            if (id != dto.LessonId) return BadRequest();
+            await _svc.UpdateAsync(dto);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _svc.DeleteAsync(id);
+            return NoContent();
         }
     }
+
 }

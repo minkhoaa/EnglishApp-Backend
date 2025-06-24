@@ -7,29 +7,25 @@ using Microsoft.VisualBasic;
 
 namespace EnglishApp.Service
 {
-    public class CategoryService : CategoryRepository
-    {
-        private readonly EnglishAppDbContext _context; 
-        public CategoryService(EnglishAppDbContext context)
-        {
-            _context = context;
-        }
-        public async Task<ApiResponse> AddNewCategoryAsync(AddNewCategoryDto dto)
-        {
-            var category = new Category()
-            {
-                CategoryName = dto.CategoryName,
-                CategoryDescription = dto.CategoryDescription
-            };
-            await _context.Categories.AddAsync(category);
-            await _context.SaveChangesAsync();  
-            return new ApiResponse {Success = true, Message = "Thêm mới category thành công", Data = category};
-        }
+  public interface ICategoryService
+{
+    Task<List<Category>> GetAllAsync();
+    Task<Category?> GetByIdAsync(int id);
+    Task<Category> AddAsync(CategoryDto category);
+    Task UpdateAsync(Category category);
+    Task DeleteAsync(int id);
+}
 
-        public async Task<ApiResponse> GetAllCategoriesAsync()
-        {
-            return new ApiResponse()
-                { Success = false, Message = "Success", Data = await _context.Categories.ToListAsync() };
-        }
-    }
+public class CategoryService : ICategoryService
+{
+    private readonly ICategoryRepository _repo;
+    public CategoryService(ICategoryRepository repo) => _repo = repo;
+
+    public Task<List<Category>> GetAllAsync() => _repo.GetAllAsync();
+    public Task<Category?> GetByIdAsync(int id) => _repo.GetByIdAsync(id);
+    public Task<Category> AddAsync(CategoryDto category) => _repo.AddAsync(category);
+    public Task UpdateAsync(Category category) => _repo.UpdateAsync(category);
+    public Task DeleteAsync(int id) => _repo.DeleteAsync(id);
+}
+
 }

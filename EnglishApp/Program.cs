@@ -57,7 +57,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddCors(option => option.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 builder.Configuration["ConnectionStrings:MyDB"] = Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__MYDB");
 
@@ -75,8 +74,10 @@ builder.Configuration["EmailSettings:EnableSSL"] = Environment.GetEnvironmentVar
 builder.Configuration["CloudinarySettings:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__CLOUDNAME");
 builder.Configuration["CloudinarySettings:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APIKEY");
 builder.Configuration["CloudinarySettings:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APISECRET");
-builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__ID"] = Environment.GetEnvironmentVariable("CLIENT__ID");
-builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__SECRET"] = Environment.GetEnvironmentVariable("CLIENT__SECRET");
+
+
+
+
 builder.Services.AddDbContext<EnglishAppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("MyDB")));
 builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<EnglishAppDbContext>().AddDefaultTokenProviders();
@@ -85,9 +86,22 @@ builder.Services.AddScoped<TokenRepository, TokenGenerator>();
 
 
 builder.Services.AddScoped<AuthenticationRepository, AuthenticationService>();
-builder.Services.AddScoped<LessonRepository,  LessonService>();
-builder.Services.AddScoped<CategoryRepository, CategoryService>();
 
+builder.Services.AddScoped<ILessonRepository,  LessonRepository>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+
+builder.Services.AddScoped<ILessonContentRepository, LessonContentRepository>();
+builder.Services.AddScoped<ILessonContentService, LessonContentService>();  
+
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+builder.Services.AddScoped<IExerciseRepository, ExerciseRepository>();
+builder.Services.AddScoped<IExerciseService, ExerciseService>();
+
+builder.Services.AddScoped<IExerciseOptionService, ExerciseOptionService>();
+builder.Services.AddScoped<IExerciseOptionRepository, ExerciseOptionRepository>();
+builder.Services.AddScoped<IExerciseResultProgressRepository, ExerciseResultProgressRepository>();
 
 
 builder.Services.AddSingleton(option =>
@@ -122,7 +136,11 @@ builder.Services.AddAuthentication(options =>
         return CookieAuthenticationDefaults.AuthenticationScheme;
     };
 })
-.AddCookie()
+.AddCookie(options =>
+{
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+})
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
@@ -155,7 +173,17 @@ builder.Services.AddAuthentication(options =>
     google.ClientSecret = builder.Configuration["GOOGLE_SETTINGS:GOOGLE__CLIENT__SECRET"] ?? Environment.GetEnvironmentVariable("GOOGLE__CLIENT__SECRET")!;
     google.CallbackPath = "/signin-google";
     google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-});
+})
+.AddFacebook(facebook =>
+{
+    facebook.ClientId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID")!;
+    facebook.ClientSecret = Environment.GetEnvironmentVariable("FACEBOOK_APP_SECRET")!;
+    facebook.CallbackPath = "/login-facebook";
+    facebook.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    facebook.Scope.Add("email");
+})
+
+;
 builder.Services.AddAuthorization();
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

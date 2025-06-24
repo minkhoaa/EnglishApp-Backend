@@ -1,11 +1,14 @@
 ﻿using EnglishApp.Model;
 using EnglishApp.Repository;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Newtonsoft.Json.Linq;
 using System.Net.NetworkInformation;
 using System.Security.Claims;
@@ -18,16 +21,17 @@ namespace EnglishApp.Controllers
     {
         private readonly AuthenticationRepository _authentication;
 
-        public AuthenticationController(AuthenticationRepository authenticationRepository) {
-        _authentication = authenticationRepository;
-        
-        
-        } 
+        public AuthenticationController(AuthenticationRepository authenticationRepository)
+        {
+            _authentication = authenticationRepository;
+
+
+        }
         [HttpPost("signupsendotp")]
         public async Task<IActionResult> SignupSentOtp(SignUpModel signUpModel)
         {
             var result = await _authentication.SignUpSentOtp(signUpModel);
-            return (result.Success ? Ok(result) : BadRequest(result)); 
+            return (result.Success ? Ok(result) : BadRequest(result));
         }
 
         [HttpPost("signupreceiveotp")]
@@ -39,14 +43,14 @@ namespace EnglishApp.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
-            var result = await _authentication.Login(loginModel);  
+            var result = await _authentication.Login(loginModel);
             return (result).Success ? Ok(result) : NotFound(result);
         }
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate(TokenModel token)
         {
-            var result = await _authentication.AuthenticateAsync(token);    
-            return (result ==  null) ? NotFound(result) : Ok(result);
+            var result = await _authentication.AuthenticateAsync(token);
+            return (result == null) ? NotFound(result) : Ok(result);
         }
         [HttpPost("sendresetpasswordcode")]
         public async Task<IActionResult> SendResetPasswordCode(ForgotPasswordRequest forgotPasswordRequest)
@@ -78,10 +82,40 @@ namespace EnglishApp.Controllers
             var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             var name = User.FindFirst(ClaimTypes.Name)?.Value;
-         
+
             var response = await _authentication.LoginWithGoogleAsync(User.Claims);
 
             return Ok(response);
+        }
+
+        [HttpGet("login-facebook")]
+        public IActionResult LoginFacebook()
+        {
+            string returnUrl = "/signin-facebook";
+            var pros = new AuthenticationProperties()
+            {
+                RedirectUri = returnUrl,
+            };
+            return Challenge(pros, FacebookDefaults.AuthenticationScheme);
+        }
+        [HttpGet("/signin-facebook")]
+        public IActionResult FacebookCallback()
+        {
+            if (!User.Identity.IsAuthenticated)
+                return Unauthorized();
+
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var name = User.FindFirst(ClaimTypes.Name)?.Value;
+            var facebookId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Trả thông tin cho FE, hoặc tạo JWT, v.v.
+            return Ok(new
+            {
+                Message = "Đăng nhập Facebook thành công!",
+                FacebookId = facebookId,
+                Email = email,
+                Name = name
+            });
         }
     }
     

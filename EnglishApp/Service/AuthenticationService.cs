@@ -170,6 +170,10 @@ namespace EnglishApp.Service
                 throw new Exception("Không lấy được email từ Google Claims!");
 
             var user = await _userManager.FindByEmailAsync(email);
+            var provider = "Google";
+            var providerKey = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var displayName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? email;
+            var loginInfo = new UserLoginInfo(provider, providerKey, displayName);
 
             if (user == null)
             {
@@ -186,20 +190,27 @@ namespace EnglishApp.Service
 
                 // Gán role mặc định (nếu cần)
                 await _userManager.AddToRoleAsync(user, "User");
+                var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+                if (!addLoginResult.Succeeded)
+                    throw new Exception("Không thể liên kết login Google cho user này!");
             }
-
+            else
+            { 
+                var logins = await _userManager.GetLoginsAsync(user);
+                if (!logins.Any(l => l.LoginProvider == provider && l.ProviderKey == providerKey))
+                {
+                    var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+                }
+            }
             var existingClaims = await _userManager.GetClaimsAsync(user);
-            // Xóa toàn bộ claims cũ nếu muốn sync lại:
             foreach (var c in existingClaims)
                 await _userManager.RemoveClaimAsync(user, c);
 
             foreach (var claim in claims)
             {
-                // Loại trừ một số claim hệ thống nếu muốn, ví dụ "sub", hoặc chỉ lưu claim Google (tùy ý)
                 await _userManager.AddClaimAsync(user, claim);
+            
             }
-
-            // 6. Tạo JWT
             var token = _tokenGenerator.GenerateToken(user);
 
             return new ApiResponse
