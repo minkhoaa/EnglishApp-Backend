@@ -19,6 +19,7 @@ namespace EnglishApp.Service
 {
     public class AuthenticationService : AuthenticationRepository
     {
+        const string defaultRole = "User";
         private readonly EnglishAppDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
@@ -163,63 +164,6 @@ namespace EnglishApp.Service
             return new ApiResponse { Success = true, Message = "Đăng nhập thành công", Data = new JwtSecurityTokenHandler().WriteToken(token) };
         }
 
-        public async Task<ApiResponse> LoginWithGoogleAsync(IEnumerable<Claim> claims)
-        {
-            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-            if (email == null)
-                throw new Exception("Không lấy được email từ Google Claims!");
-
-            var user = await _userManager.FindByEmailAsync(email);
-            var provider = "Google";
-            var providerKey = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            var displayName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? email;
-            var loginInfo = new UserLoginInfo(provider, providerKey, displayName);
-
-            if (user == null)
-            {
-                user = new User
-                {
-                    UserName = email,
-                    Email = email,
-                    EmailConfirmed = true,
-                };
-
-                var createResult = await _userManager.CreateAsync(user);
-                if (!createResult.Succeeded)
-                    throw new Exception($"Tạo user thất bại: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-
-                // Gán role mặc định (nếu cần)
-                await _userManager.AddToRoleAsync(user, "User");
-                var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
-                if (!addLoginResult.Succeeded)
-                    throw new Exception("Không thể liên kết login Google cho user này!");
-            }
-            else
-            { 
-                var logins = await _userManager.GetLoginsAsync(user);
-                if (!logins.Any(l => l.LoginProvider == provider && l.ProviderKey == providerKey))
-                {
-                    var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
-                }
-            }
-            var existingClaims = await _userManager.GetClaimsAsync(user);
-            foreach (var c in existingClaims)
-                await _userManager.RemoveClaimAsync(user, c);
-
-            foreach (var claim in claims)
-            {
-                await _userManager.AddClaimAsync(user, claim);
-            
-            }
-            var token = _tokenGenerator.GenerateToken(user);
-
-            return new ApiResponse
-            {
-               Success = true,
-               Message = "Login Success",
-               Data = token
-            };
-        }
 
         public async Task<ApiResponse> ResetPassword(ResetPasswordRequest resetPasswordModel)
         {
@@ -260,6 +204,86 @@ namespace EnglishApp.Service
 
         }
 
+
+        public async Task<ApiResponse> LoginWithGoogleAndFacebookAsync(IEnumerable<Claim> claims, string provider)
+        {
+             var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            if (email == null)
+                throw new Exception("Không lấy được email từ Claims!");
+            
+            var providerKey = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var displayName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? email;
+            var loginInfo = new UserLoginInfo(provider, providerKey, displayName);
+
+            var signinResult = _signInManager.ExternalLoginSignInAsync(provider,providerKey, isPersistent: false, bypassTwoFactor: false);
+            if (signinResult.IsCompletedSuccessfully)
+            {
+                var existingUser = await _userManager.FindByLoginAsync(provider, providerKey);
+                var existingToken = _tokenGenerator.GenerateToken(existingUser);
+                return new ApiResponse()
+                {
+                    Success = true,
+                    Message = "Login Success",
+                    Data = existingToken
+                };
+            }
+            var user = await _userManager.FindByEmailAsync(email); 
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                };
+                var createResult = await _userManager.CreateAsync(user);
+
+                if (! await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    await _roleManager.CreateAsync(new Role(){Name = defaultRole});
+                }
+                await _userManager.AddToRoleAsync(user,defaultRole);
+
+
+                var userInfo = new UserInfo()
+                {
+                    Email = user.Email,
+                    Birthday = new DateTime(1970, 1, 1).ToUniversalTime(),
+                    UserId = user.Id
+                };
+              
+                await _context.UserInfo.AddAsync(userInfo);
+                
+                if (!createResult.Succeeded)
+                    throw new Exception($"Tạo user thất bại: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+
+                // Gán role mặc định (nếu cần)
+                await _userManager.AddToRoleAsync(user, "User");
+                var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+                if (!addLoginResult.Succeeded)
+                    throw new Exception("Không thể liên kết cho user này!");
+            }
+            var userLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+            if (!userLoginResult.Succeeded) throw new Exception("Cannot link account for this user");
+            var existingClaims = await _userManager.GetClaimsAsync(user);
+            foreach (var c in existingClaims)
+                await _userManager.RemoveClaimAsync(user, c);
+
+            foreach (var claim in claims)
+            {
+                await _userManager.AddClaimAsync(user, claim);
+            
+            }
+            var token = _tokenGenerator.GenerateToken(user);
+            await _context.SaveChangesAsync();
+            return new ApiResponse
+            {
+               Success = true,
+               Message = "Login Success",
+               Data = token
+            };
+          
+        }
 
 
         public async Task<ApiResponse> SignUpReceiveOtp(ConfirmOtpModel confirmOtpModel)
@@ -335,7 +359,7 @@ namespace EnglishApp.Service
                     Birthday = new DateTime(1970, 1, 1).ToUniversalTime()
                 };
                 await _context.UserInfo.AddAsync(userInfo);
-
+                
                 _context.TempOtps.Remove(tempOtpEntity);
                 await _context.SaveChangesAsync();
 

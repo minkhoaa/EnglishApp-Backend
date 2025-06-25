@@ -83,7 +83,7 @@ namespace EnglishApp.Controllers
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             var name = User.FindFirst(ClaimTypes.Name)?.Value;
 
-            var response = await _authentication.LoginWithGoogleAsync(User.Claims);
+            var response = await _authentication.LoginWithGoogleAndFacebookAsync(User.Claims, "Google");
 
             return Ok(response);
         }
@@ -107,8 +107,8 @@ namespace EnglishApp.Controllers
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             var name = User.FindFirst(ClaimTypes.Name)?.Value;
             var facebookId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // Trả thông tin cho FE, hoặc tạo JWT, v.v.
+            
+            var response =  _authentication.LoginWithGoogleAndFacebookAsync(User.Claims, "Facebook");
             return Ok(new
             {
                 Message = "Đăng nhập Facebook thành công!",

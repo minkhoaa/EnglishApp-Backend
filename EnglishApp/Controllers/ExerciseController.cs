@@ -27,9 +27,9 @@ namespace EnglishApp.Controllers
                 return await _service.GetAllAsync();
             }
             
-            [HttpGet("/api/exercises/{exerciseId}")]
-            public async Task<IActionResult> GetAll(int exerciseId)
-                => Ok(await _service.GetByLessonIdAsync(exerciseId));
+            [HttpGet("/api/exercises/{lessonId}")]
+            public async Task<IActionResult> GetAll(int lessonId)
+                => Ok(await _service.GetByLessonIdAsync(lessonId));
 
             [HttpPost]
             public async Task<IActionResult> Create(int exerciseId, ExerciseOption dto)

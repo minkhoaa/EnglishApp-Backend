@@ -4,6 +4,8 @@ namespace EnglishApp.Data
 {
     public class User : IdentityUser<int>
     {
+        
+        
         public ICollection<UserRole> UserRoles { get; set; } = null!;
 
         public ICollection<UserExerciseResult> ExerciseResults { get; set; }

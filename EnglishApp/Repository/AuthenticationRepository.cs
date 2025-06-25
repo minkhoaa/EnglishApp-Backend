@@ -19,6 +19,7 @@ namespace EnglishApp.Repository
         public Task<ApiResponse> ForgotPassword(ForgotPasswordRequest email);
 
         public Task<ApiResponse> ResetPassword(ResetPasswordRequest resetPasswordModel);
-        public Task<ApiResponse> LoginWithGoogleAsync(IEnumerable<Claim> claims);
+        public Task<ApiResponse> LoginWithGoogleAndFacebookAsync(IEnumerable<Claim> claims, string provider);
+    
     }
 }
