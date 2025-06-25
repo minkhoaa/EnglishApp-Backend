@@ -22,20 +22,23 @@ namespace EnglishApp.Service
 
         public string GenerateToken(User user, IList<Claim>? additionalClaims = null)
         {
-            // Lấy các claim mặc định của IdentityUser
             var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
+            {
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+            };
             if (additionalClaims != null)
             {
                 foreach (var c in additionalClaims)
                 {
+                    // Không add thêm jti nếu đã có
+                    if (c.Type == JwtRegisteredClaimNames.Jti) continue;
                     if (!claims.Any(cl => cl.Type == c.Type && cl.Value == c.Value))
                         claims.Add(c);
                 }
             }
+
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SecretKey"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -43,8 +46,6 @@ namespace EnglishApp.Service
             var expires = DateTime.UtcNow.AddHours(6); 
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["JWT:Issuer"],        
-                audience: _configuration["JWT:Audience"],   
                 claims: claims,
                 expires: expires,
                 signingCredentials: creds

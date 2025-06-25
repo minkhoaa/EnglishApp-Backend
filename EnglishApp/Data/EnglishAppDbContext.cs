@@ -23,6 +23,9 @@ namespace EnglishApp.Data
         public DbSet<UserLogin> UserLogins {  get; set; }
         public DbSet<UserToken> UserTokens {get;set; }
         public DbSet<RoleClaim> RoleClaims {get; set; }
+        
+        public DbSet<FlashCard> FlashCards {get; set; } 
+        public DbSet<Deck> Decks {get; set; }
 
         public DbSet<Category> Categories { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
@@ -56,7 +59,17 @@ namespace EnglishApp.Data
             builder.Entity<UserLessonProgress>().ToTable("userlessonprogress");
             builder.Entity<UserExerciseResult>().ToTable("userexerciseresult");
             builder.Entity<UserInfo>().ToTable("userinfo");
+            builder.Entity<FlashCard>().ToTable("flashcards");
+            builder.Entity<Deck>().ToTable("decks");
 
+            builder.Entity<FlashCard>().HasKey(x=>x.FlashcardId);
+            builder.Entity<Deck>().HasKey(x=>x.Id);
+            builder.Entity<FlashCard>()
+                .HasOne(x=>x.Deck)
+                .WithMany(x=>x.FlashCards)
+                .HasForeignKey(x=>x.DeckId);
+            
+            
             builder.Entity<UserLessonProgress>()
                 .HasKey(x => new { x.LessonId, x.UserId});
 

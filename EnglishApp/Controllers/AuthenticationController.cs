@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Newtonsoft.Json.Linq;
 using System.Net.NetworkInformation;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.VisualBasic;
 
 namespace EnglishApp.Controllers
 {
@@ -116,6 +118,21 @@ namespace EnglishApp.Controllers
                 Email = email,
                 Name = name
             });
+        }
+
+        [HttpGet("/getcurrentuserinfo")]
+  
+        public async Task<IActionResult> GetCurrentUserInformation()
+        {
+            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _authentication.GetCurrentUserInformation(int.Parse(id!));
+            return Ok(user);
+        }
+        [Authorize]
+        [HttpGet("me-debug")]
+        public IActionResult GetCurrentUserClaims()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
         }
     }
     

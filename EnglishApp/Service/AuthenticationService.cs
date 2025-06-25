@@ -140,28 +140,21 @@ namespace EnglishApp.Service
 
             var passswordValid = await _userManager.CheckPasswordAsync(user, loginModel.Password);
             if (passswordValid == false) { return new ApiResponse { Success = false, Message = "Sai mật khẩu" }; }
-
+           
             var authClaims = new List<Claim>
             {
                 new Claim(ClaimTypes.Email, loginModel.Email),
                 new Claim(JwtRegisteredClaimNames.Email, loginModel.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), 
             };
-            var userRoles = await _userManager.GetRolesAsync(user);
-            foreach (var role in userRoles)
-            {
-                authClaims.Add(new Claim(ClaimTypes.Role, role.ToString()));
-            }
-            var authenKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SecretKey"]!));
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["JWT:ValidIssuer"],
-                audience: _configuration["JWT:ValidAudience"],
-                expires: DateTime.UtcNow.AddDays(1),
-                claims: authClaims,
-                signingCredentials: new SigningCredentials(authenKey, SecurityAlgorithms.HmacSha256Signature)
-                );
-            return new ApiResponse { Success = true, Message = "Đăng nhập thành công", Data = new JwtSecurityTokenHandler().WriteToken(token) };
+           var userRoles = await _userManager.GetRolesAsync(user);
+                      foreach (var role in userRoles)
+                      {
+                          authClaims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+                      }
+            var accesstoken = _tokenGenerator.GenerateToken(user, authClaims);
+            return new ApiResponse { Success = true, Message = "Đăng nhập thành công", Data = accesstoken };
         }
 
 
@@ -215,8 +208,8 @@ namespace EnglishApp.Service
             var displayName = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? email;
             var loginInfo = new UserLoginInfo(provider, providerKey, displayName);
 
-            var signinResult = _signInManager.ExternalLoginSignInAsync(provider,providerKey, isPersistent: false, bypassTwoFactor: false);
-            if (signinResult.IsCompletedSuccessfully)
+            var signinResult = await _signInManager.ExternalLoginSignInAsync(provider,providerKey, isPersistent: false, bypassTwoFactor: false);
+            if (signinResult.Succeeded)
             {
                 var existingUser = await _userManager.FindByLoginAsync(provider, providerKey);
                 var existingToken = _tokenGenerator.GenerateToken(existingUser);
@@ -251,30 +244,21 @@ namespace EnglishApp.Service
                     Birthday = new DateTime(1970, 1, 1).ToUniversalTime(),
                     UserId = user.Id
                 };
-              
                 await _context.UserInfo.AddAsync(userInfo);
-                
-                if (!createResult.Succeeded)
-                    throw new Exception($"Tạo user thất bại: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-
-                // Gán role mặc định (nếu cần)
-                await _userManager.AddToRoleAsync(user, "User");
-                var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
-                if (!addLoginResult.Succeeded)
-                    throw new Exception("Không thể liên kết cho user này!");
+                var existingLogins = await _userManager.GetLoginsAsync(user);
+                if (!existingLogins.Any(l => l.LoginProvider == provider && l.ProviderKey == providerKey))
+                {
+                    var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+                    if (!addLoginResult.Succeeded)
+                        throw new Exception("Không thể liên kết external login cho user này!");
+                }
             }
-            var userLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
-            if (!userLoginResult.Succeeded) throw new Exception("Cannot link account for this user");
-            var existingClaims = await _userManager.GetClaimsAsync(user);
-            foreach (var c in existingClaims)
+            var currentClaims = await _userManager.GetClaimsAsync(user);
+            foreach (var c in currentClaims)
                 await _userManager.RemoveClaimAsync(user, c);
-
             foreach (var claim in claims)
-            {
                 await _userManager.AddClaimAsync(user, claim);
-            
-            }
-            var token = _tokenGenerator.GenerateToken(user);
+            var token =_tokenGenerator.GenerateToken(user);
             await _context.SaveChangesAsync();
             return new ApiResponse
             {
@@ -283,6 +267,12 @@ namespace EnglishApp.Service
                Data = token
             };
           
+        }
+
+        public async Task<UserInfo> GetCurrentUserInformation(int userId) 
+        {
+            var userInfo = await _context.UserInfo.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
+            return userInfo;
         }
 
 
@@ -358,6 +348,7 @@ namespace EnglishApp.Service
                     Email = user.Email,
                     Birthday = new DateTime(1970, 1, 1).ToUniversalTime()
                 };
+                var userlogin =  await _userManager.GetLoginsAsync(user);
                 await _context.UserInfo.AddAsync(userInfo);
                 
                 _context.TempOtps.Remove(tempOtpEntity);
@@ -459,6 +450,7 @@ namespace EnglishApp.Service
                 };
             }
         }
-
+        
+        
     }
 }

@@ -12,5 +12,7 @@ namespace EnglishApp.Data
         public ICollection<UserLessonProgress> LessonProgresses { get; set; }
 
         public UserInfo UserInfo { get; set; }
+
+        
     }
 }

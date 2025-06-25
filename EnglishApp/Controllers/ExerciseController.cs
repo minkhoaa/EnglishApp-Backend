@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EnglishApp.Controllers
 {
     [ApiController]
-    [Route("api/exercises/{exerciseId}/options")]
+    [Route("api/exercises")]
         public class ExerciseOptionController : ControllerBase
         {
             private readonly IExerciseService _service;
@@ -59,6 +59,13 @@ namespace EnglishApp.Controllers
             {
                 await _exerciseOptionService.DeleteAsync(id);
                 return NoContent();
+            }
+
+            [HttpGet("/api/exercise-options/getallexerciseandoption")]
+            public async Task<IActionResult> GetByLessonId(int lessonId)
+            {
+                var result = await _exerciseOptionService.GetAllExerciseAndFullOptionByLessonAsync(lessonId);
+                return Ok(result);
             }
         }
     }

@@ -102,7 +102,7 @@ builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<IExerciseOptionService, ExerciseOptionService>();
 builder.Services.AddScoped<IExerciseOptionRepository, ExerciseOptionRepository>();
 builder.Services.AddScoped<IExerciseResultProgressRepository, ExerciseResultProgressRepository>();
-
+builder.Services.AddScoped<IFlashCardRepository, FlashCardService>();
 
 builder.Services.AddSingleton(option =>
 {
@@ -153,6 +153,16 @@ builder.Services.AddAuthentication(options =>
     };
     options.Events = new JwtBearerEvents
     {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine("JWT AUTH FAILED: " + context.Exception?.ToString());
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("JWT TOKEN VALIDATED: " + context.Principal?.Identity?.Name);
+            return Task.CompletedTask;
+        },
         OnChallenge = context =>
         {
             context.HandleResponse();
@@ -163,9 +173,11 @@ builder.Services.AddAuthentication(options =>
                 message = "Vui lòng đăng nhập"
             });
 
+            Console.WriteLine("JWT CHALLENGE - Token invalid or not found");
             return context.Response.WriteAsync(result);
         }
     };
+
 })
 .AddGoogle(google =>
 {
