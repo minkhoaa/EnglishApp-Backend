@@ -6,7 +6,7 @@ namespace EnglishApp.Repository;
 public interface IFlashCardRepository
 {
     Task<List<FlashCard>> GetAllAsync();
-    Task<List<FlashCard>> AddAsync(List<FlashCardDto> dto); 
+    Task<List<FlashCard>> AddAsync(List<FlashCardDto> dto, int deckId); 
     Task<int> EditAsync(FlashCardDto dto, int id);
     Task<int> DeleteAsync(int id);
 }

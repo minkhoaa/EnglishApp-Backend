@@ -32,11 +32,11 @@ public class FlashCardController : ControllerBase
     }
 
     [HttpPost("/api/addflashcard")]
-    public async Task<IActionResult> AddFlashCard(List<FlashCardDto> flashCardDtos)
+    public async Task<IActionResult> AddFlashCard(List<FlashCardDto> flashCardDtos, int deckId)
     {
         try
         {
-            var result = await _service.AddAsync(flashCardDtos);
+            var result = await _service.AddAsync(flashCardDtos, deckId);
             return Ok(result);
         }
         catch (Exception e)

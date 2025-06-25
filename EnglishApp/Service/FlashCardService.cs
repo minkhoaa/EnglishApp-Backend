@@ -21,16 +21,21 @@ public class FlashCardService : IFlashCardRepository
         return result; 
     }
 
-    public async Task<List<FlashCard>> AddAsync(List<FlashCardDto> dto)
+    public async Task<List<FlashCard>> AddAsync(List<FlashCardDto> dto, int deckId)
     {
         var entities = dto.Select(x => new FlashCard
         {
             FrontText = x.FrontText,
             BackText = x.BackText,
             CreatedAt = DateTime.UtcNow,
-            LastReviewedAt = DateTime.Now,
+            LastReviewedAt = DateTime.UtcNow,
+            DeckId = deckId,
         }).ToList();
+        
         _context.FlashCards.AddRange(entities);
+        int effected = await _context.SaveChangesAsync();
+        var deck = await _context.Decks.AsNoTracking().Where(x=>x.Id == deckId)
+            .ExecuteUpdateAsync(setter => setter.SetProperty(x=>x.FlashCardNumber, x=>x.FlashCardNumber + effected));
         await _context.SaveChangesAsync();
         return entities.ToList();
     }

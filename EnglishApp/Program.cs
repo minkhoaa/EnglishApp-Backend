@@ -103,6 +103,8 @@ builder.Services.AddScoped<IExerciseOptionService, ExerciseOptionService>();
 builder.Services.AddScoped<IExerciseOptionRepository, ExerciseOptionRepository>();
 builder.Services.AddScoped<IExerciseResultProgressRepository, ExerciseResultProgressRepository>();
 builder.Services.AddScoped<IFlashCardRepository, FlashCardService>();
+builder.Services.AddScoped<IDeckRepository, DeckService>();
+
 
 builder.Services.AddSingleton(option =>
 {
