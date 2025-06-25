@@ -3,6 +3,7 @@ using System;
 using EnglishApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnglishApp.Migrations
 {
     [DbContext(typeof(EnglishAppDbContext))]
-    partial class EnglishAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250625134135_updatedbver4")]
+    partial class updatedbver4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,135 +65,9 @@ namespace EnglishApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId");
-
                     b.ToTable("decks", (string)null);
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.Exam", b =>
-                {
-                    b.Property<int>("ExamId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ExamId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Level")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("ExamId");
-
-                    b.ToTable("exams", (string)null);
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamOption", b =>
-                {
-                    b.Property<int>("OptionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OptionId"));
-
-                    b.Property<bool>("IsCorrect")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("OptionText")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.HasKey("OptionId");
-
-                    b.HasIndex("QuestionId");
-
-                    b.ToTable("examoptions", (string)null);
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamQuestion", b =>
-                {
-                    b.Property<int>("QuestionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("QuestionId"));
-
-                    b.Property<string>("CorrectAnswer")
-                        .HasColumnType("text");
-
-                    b.Property<string>("QuestionText")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("SectionId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("QuestionId");
-
-                    b.HasIndex("SectionId");
-
-                    b.ToTable("examquestions", (string)null);
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamSection", b =>
-                {
-                    b.Property<int>("SectionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SectionId"));
-
-                    b.Property<string>("AudioUrl")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ExamId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Transcript")
-                        .HasColumnType("text");
-
-                    b.HasKey("SectionId");
-
-                    b.HasIndex("ExamId");
-
-                    b.ToTable("examsections", (string)null);
                 });
 
             modelBuilder.Entity("EnglishApp.Data.Exercise", b =>
@@ -704,50 +581,6 @@ namespace EnglishApp.Migrations
                     b.ToTable("usertokens", (string)null);
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.Deck", b =>
-                {
-                    b.HasOne("EnglishApp.Data.User", "Owner")
-                        .WithMany("Decks")
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamOption", b =>
-                {
-                    b.HasOne("EnglishApp.Data.ExamQuestion", "Question")
-                        .WithMany("Options")
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Question");
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamQuestion", b =>
-                {
-                    b.HasOne("EnglishApp.Data.ExamSection", "Section")
-                        .WithMany("Questions")
-                        .HasForeignKey("SectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Section");
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamSection", b =>
-                {
-                    b.HasOne("EnglishApp.Data.Exam", "Exam")
-                        .WithMany("Sections")
-                        .HasForeignKey("ExamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Exam");
-                });
-
             modelBuilder.Entity("EnglishApp.Data.Exercise", b =>
                 {
                     b.HasOne("EnglishApp.Data.Lesson", "Lesson")
@@ -946,21 +779,6 @@ namespace EnglishApp.Migrations
                     b.Navigation("FlashCards");
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.Exam", b =>
-                {
-                    b.Navigation("Sections");
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamQuestion", b =>
-                {
-                    b.Navigation("Options");
-                });
-
-            modelBuilder.Entity("EnglishApp.Data.ExamSection", b =>
-                {
-                    b.Navigation("Questions");
-                });
-
             modelBuilder.Entity("EnglishApp.Data.Exercise", b =>
                 {
                     b.Navigation("ExerciseOptions");
@@ -989,8 +807,6 @@ namespace EnglishApp.Migrations
 
             modelBuilder.Entity("EnglishApp.Data.User", b =>
                 {
-                    b.Navigation("Decks");
-
                     b.Navigation("ExerciseResults");
 
                     b.Navigation("FavoriteDecks");

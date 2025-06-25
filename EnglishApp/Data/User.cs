@@ -12,7 +12,8 @@ namespace EnglishApp.Data
         public ICollection<UserLessonProgress> LessonProgresses { get; set; }
 
         public UserInfo UserInfo { get; set; }
-
+        public ICollection<FavoriteDeck>  FavoriteDecks { get; set; } = null!;
         
+        public ICollection<Deck>  Decks { get; set; } = null!;
     }
 }

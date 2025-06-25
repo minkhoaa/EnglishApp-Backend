@@ -34,11 +34,17 @@ namespace EnglishApp.Data
         public DbSet<ExerciseOption> ExerciseOptions { get; set; }
         public DbSet<UserLessonProgress> UserLessonProgresses { get; set; }
         public DbSet<UserExerciseResult> UserExerciseResults { get; set; }
-
+        public DbSet<FavoriteDeck>  FavoriteDecks { get; set; } = null!;
         public DbSet<UserInfo> UserInfo { get; set; }
 
         public DbSet<TempOtp> TempOtps { get; set; }
 
+        
+        
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<ExamSection> ExamSections { get; set; }
+        public DbSet<ExamQuestion> ExamQuestions { get; set; }
+        public DbSet<ExamOption> ExamOptions { get; set; }
         protected override void OnModelCreating(ModelBuilder builder) 
         {
             base.OnModelCreating(builder);
@@ -61,6 +67,26 @@ namespace EnglishApp.Data
             builder.Entity<UserInfo>().ToTable("userinfo");
             builder.Entity<FlashCard>().ToTable("flashcards");
             builder.Entity<Deck>().ToTable("decks");
+            builder.Entity<Exam>().ToTable("exams");
+            builder.Entity<ExamSection>().ToTable("examsections");
+            builder.Entity<ExamQuestion>().ToTable("examquestions");
+            builder.Entity<ExamOption>().ToTable("examoptions");
+
+            builder.Entity<ExamSection>()
+                .HasOne(x => x.Exam)
+                .WithMany(x => x.Sections)
+                .HasForeignKey(x => x.ExamId);
+
+            builder.Entity<ExamQuestion>()
+                .HasOne(x => x.Section)
+                .WithMany(x => x.Questions)
+                .HasForeignKey(x => x.SectionId);
+
+            builder.Entity<ExamOption>()
+                .HasOne(x => x.Question)
+                .WithMany(x => x.Options)
+                .HasForeignKey(x => x.QuestionId);
+
 
             builder.Entity<FlashCard>().HasKey(x=>x.FlashcardId);
             builder.Entity<Deck>().HasKey(x=>x.Id);
@@ -69,6 +95,27 @@ namespace EnglishApp.Data
                 .WithMany(x=>x.FlashCards)
                 .HasForeignKey(x=>x.DeckId);
             
+            
+            
+            builder.Entity<FavoriteDeck>().ToTable("favoritedecks");
+            builder.Entity<FavoriteDeck>().HasKey(x => new
+            {
+                x.UserId, x.DeckId
+            });
+            builder.Entity<FavoriteDeck>()
+                .HasOne(x=>x.User)
+                .WithMany(x=>x.FavoriteDecks)
+                .HasForeignKey(x=>x.UserId);
+            
+            builder.Entity<Deck>()
+                .HasOne(x=>x.Owner)
+                .WithMany(x=>x.Decks)
+                .HasForeignKey(x=>x.OwnerId);
+            
+            builder.Entity<FavoriteDeck>()
+                .HasOne(x=>x.Deck)
+                .WithMany(x=>x.FavoriteDecks)
+                .HasForeignKey(x=>x.DeckId);
             
             builder.Entity<UserLessonProgress>()
                 .HasKey(x => new { x.LessonId, x.UserId});

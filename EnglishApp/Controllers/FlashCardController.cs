@@ -1,7 +1,11 @@
+using EnglishApp.Data;
 using EnglishApp.Dto.Request;
+using EnglishApp.Dto.Response;
 using EnglishApp.Repository;
 using EnglishApp.Service;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
 namespace EnglishApp.Controllers;
 [ApiController]
 [Route("api/flashcard")]
@@ -10,10 +14,11 @@ public class FlashCardController : ControllerBase
 {
     
     private readonly IFlashCardRepository _service;
-
-    public FlashCardController(IFlashCardRepository service)
+    private readonly EnglishAppDbContext _context;
+    public FlashCardController(IFlashCardRepository service,  EnglishAppDbContext context)
     {
         _service = service;
+        _context = context;
     }
 
     [HttpGet("/api/getallflashcards")]
@@ -60,4 +65,21 @@ public class FlashCardController : ControllerBase
             
         return (result > 0) ?  Ok(result) : BadRequest();
     }
+
+    [HttpGet("/api/getflashcardbyiddeck/{idDeck}")]
+    public async Task<IActionResult> GetDeckByIdAsync(int idDeck)
+    {
+        var result = await _context.FlashCards.AsNoTracking()
+            .Where(x => x.DeckId == idDeck)
+            .Select(x => new FlashCardResponse()
+            {
+                FlashcardId = x.FlashcardId,
+                FrontText = x.FrontText,
+                BackText = x.BackText
+            })
+            .ToListAsync();
+        return Ok(result);
+    }
+    
+
 }

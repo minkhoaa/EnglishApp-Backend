@@ -35,8 +35,8 @@ public class FlashCardService : IFlashCardRepository
         _context.FlashCards.AddRange(entities);
         int effected = await _context.SaveChangesAsync();
         var deck = await _context.Decks.AsNoTracking().Where(x=>x.Id == deckId)
-            .ExecuteUpdateAsync(setter => setter.SetProperty(x=>x.FlashCardNumber, x=>x.FlashCardNumber + effected));
-        await _context.SaveChangesAsync();
+            .ExecuteUpdateAsync(setter => 
+                setter.SetProperty(x=>x.FlashCardNumber, x=>x.FlashCardNumber + effected));
         return entities.ToList();
     }
 

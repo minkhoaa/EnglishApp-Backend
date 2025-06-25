@@ -15,7 +15,7 @@ public class DeckService:IDeckRepository
     }
     public async Task<List<Deck>> GetAllDecks()
     {
-        var result = await _context.Decks.AsNoTracking().ToListAsync();
+        var result = await _context.Decks.AsNoTracking().Where(x=>x.Status == "public").ToListAsync();
         return result;
     }
 
@@ -25,12 +25,14 @@ public class DeckService:IDeckRepository
         return result!;
     }
 
-    public async Task<Deck> AddNewDeck(DeckDto dto)
+    public async Task<Deck> AddNewDeck(DeckDto dto, int ownerId)
     {
         var newDeck = new Deck()
         {
             Name = dto.Name,
-            FlashCardNumber = dto.FlashCardNumber,
+            FlashCardNumber = 0,
+            Status = "private",
+            OwnerId = ownerId
         };
         _context.Decks.Add(newDeck);
         await _context.SaveChangesAsync();
@@ -42,7 +44,7 @@ public class DeckService:IDeckRepository
         var existingDeck = _context.Decks.AsNoTracking()
             .Where(x => x.Id == id)
             .ExecuteUpdateAsync(setter => setter
-                .SetProperty(x => x.FlashCardNumber, dto.FlashCardNumber)
+                .SetProperty(x=>x.Status, dto.Status)
                 .SetProperty(x => x.Name, dto.Name)
             );
         return existingDeck;
