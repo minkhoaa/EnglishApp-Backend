@@ -18,4 +18,7 @@ public class ExamQuestion
     public ExamSection Section { get; set; } = null!;
     public ICollection<ExamOption>? Options { get; set; }
     public string? CorrectAnswer { get; set; }          
+    
+    public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
+
 }

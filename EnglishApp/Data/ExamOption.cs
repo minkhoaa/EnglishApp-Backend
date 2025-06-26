@@ -13,5 +13,8 @@ public class ExamOption
     public string OptionText { get; set; } = null!;
     public bool IsCorrect { get; set; }
     public int SortOrder { get; set; }
-    public ExamQuestion Question { get; set; } = null!;
+    public ExamQuestion Question { get; set; } = null!; 
+    
+    public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
+
 }

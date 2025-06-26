@@ -57,6 +57,27 @@ public class ExamController : ControllerBase
             return BadRequest(exception.Message);
         }
     }
+
+    [HttpGet("/api/allexams")]
+    public async Task<IActionResult> GetAllExams()
+    {
+        try
+        {
+            var result = await _context.Exams.AsNoTracking().Select(exam => new ExamDto()
+            {
+                ExamId = exam.ExamId,
+                Title = exam.Title,
+                Description = exam.Description,
+                Level = exam.Level,
+                CreatedAt = exam.CreatedAt,
+            }).ToListAsync();
+            return Ok(result);
+        }
+        catch (Exception exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
     
     [HttpGet("/api/fullexamsandquestion/{id}")]
     public async Task<IActionResult> GetExam(int id)
@@ -97,6 +118,74 @@ public class ExamController : ControllerBase
         if (result == null) return NotFound();
         return Ok(result);
     }
+    [HttpGet("/api/exams/GetSectionsByExamId/{examId}")]
+    public async Task<IActionResult> GetSectionsByExamId(int examId)
+    {
+        var sections = await _context.ExamSections
+            .AsNoTracking()
+            .Where(s => s.ExamId == examId)
+            .Select(section => new ExamSectionDto
+            {
+                SectionId = section.SectionId,
+                ExamId = section.ExamId,
+                Name = section.Name,
+                Transcript = section.Transcript,
+                AudioUrl = section.AudioUrl,
+                SortOrder = section.SortOrder
+            })
+            .ToListAsync();
+
+        if (sections == null || !sections.Any()) return NotFound();
+        return Ok(sections);
+    }
+    [HttpGet("/api/sections/GetQuestionsBySectionId/{sectionId}")]
+    public async Task<IActionResult> GetQuestionsBySectionId(int sectionId)
+    {
+        var questions = await _context.ExamQuestions
+            .AsNoTracking()
+            .Where(q => q.SectionId == sectionId)
+            .Select(q => new ExamQuestionDto
+            {
+                QuestionId = q.QuestionId,
+                SectionId = q.SectionId,
+                QuestionText = q.QuestionText,
+                Type = q.Type,
+                SortOrder = q.SortOrder,
+                CorrectAnswer = q.CorrectAnswer,
+                options = q.Options.Select(opt => new ExamOptionDto()
+                {
+                    OptionId = opt.OptionId,
+                    QuestionId = opt.QuestionId,
+                    OptionText = opt.OptionText,
+                    IsCorrect = opt.IsCorrect
+                }).ToList()
+            })
+            .ToListAsync();
+
+        if (questions == null || !questions.Any()) return NotFound();
+        return Ok(questions);
+    }
+
+    [HttpGet("/api/questions/GetOptionsByQuestionId/{questionId}")]
+    public async Task<IActionResult> GetOptionsByQuestionId(int questionId)
+    {
+        var options = await _context.ExamOptions
+            .AsNoTracking()
+            .Where(opt => opt.QuestionId == questionId)
+            .Select(opt => new ExamOptionDto
+            {
+                OptionId = opt.OptionId,
+                QuestionId = opt.QuestionId,
+                OptionText = opt.OptionText,
+                IsCorrect = opt.IsCorrect,
+                SortOrder = opt.SortOrder
+            })
+            .ToListAsync();
+
+        if (options == null || !options.Any()) return NotFound();
+        return Ok(options);
+    }
+
     
     [HttpPost("/api/addfullexamsandquestion")]
     public async Task<IActionResult> AddExam([FromBody] CreateExamDto examDto)

@@ -22,4 +22,6 @@ public class Exam
   
     public ExamCategory? Category { get; set; }
     public ICollection<ExamSection>? Sections { get; set; } 
+    public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
+
 }

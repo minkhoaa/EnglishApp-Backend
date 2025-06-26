@@ -15,4 +15,6 @@ public class ExamSection
     public int SortOrder { get; set; }
     public Exam Exam { get; set; } = null!;
     public ICollection<ExamQuestion>? Questions { get; set; }
+    public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
+
 }

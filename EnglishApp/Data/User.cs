@@ -15,5 +15,7 @@ namespace EnglishApp.Data
         public ICollection<FavoriteDeck>  FavoriteDecks { get; set; } = null!;
         
         public ICollection<Deck>  Decks { get; set; } = null!;
+        
+        public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
     }
 }
