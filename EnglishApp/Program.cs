@@ -75,7 +75,7 @@ builder.Configuration["CloudinarySettings:CloudName"] = Environment.GetEnvironme
 builder.Configuration["CloudinarySettings:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APIKEY");
 builder.Configuration["CloudinarySettings:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARYSETTINGS__APISECRET");
 
-
+builder.Configuration["GEMINI:API_KEY"] = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
 
 
 builder.Services.AddDbContext<EnglishAppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("MyDB")));
@@ -105,6 +105,7 @@ builder.Services.AddScoped<IExerciseResultProgressRepository, ExerciseResultProg
 builder.Services.AddScoped<IFlashCardRepository, FlashCardService>();
 builder.Services.AddScoped<IDeckRepository, DeckService>();
 
+builder.Services.AddHttpClient<OpenAIService>();
 
 builder.Services.AddSingleton(option =>
 {

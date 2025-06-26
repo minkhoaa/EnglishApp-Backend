@@ -249,5 +249,6 @@ public class ExamController : ControllerBase
 
         return CreatedAtAction(nameof(GetExam), new { id = exam.ExamId }, new { exam.ExamId });
     }
-
+    
+    
 }

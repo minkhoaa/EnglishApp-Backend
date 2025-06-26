@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using EnglishApp.Data;
 using EnglishApp.Dto.Request;
+using EnglishApp.Dto.Response;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -77,16 +79,76 @@ public class UserResultController : ControllerBase
         return Ok(new {message = "save successfully"});
     }
 
-    [HttpGet("/api/alluserexamresult")]
-    public async Task<IActionResult> GetAllUserExamResult()
+    [HttpGet("/api/getuserexamresult")]
+    public async Task<IActionResult> GetUserExamResult(int userId, int  examId,  int sectionId)
     {
-        var result = await _context.UserExamResults.AsNoTracking()
-            .Include(x=>x.User)
-            .Include(x=>x.Exam)
-            .Include(x=>x.Question)
-            .Include(x=>x.AnswerOption)
+        var userresult = await _context.UserExamResults.AsNoTracking()
+            .Include(x=>x.Section).Where(x => x.UserId == userId && x.ExamId == examId)   
             .ToListAsync();
+        
+        var ids = userresult.Select(x=>x.QuestionId).Distinct().ToList();
+
+        var correctAnswers = await _context.ExamOptions
+            .AsNoTracking()
+            .Where(x => ids.Contains(x.QuestionId) && x.IsCorrect)
+            .Select(x => new { x.QuestionId, x.OptionId, x.OptionText })
+            .ToListAsync();
+        var result = userresult.Select(x =>
+        {
+            var correct = correctAnswers.FirstOrDefault(a => a.QuestionId == x.QuestionId);
+            return new DetailedResult()
+            {
+                UserAnswerId = x.UserExamResultId,
+                UserAnwser = x.AnswerText,
+                IsCorrect = x.IsCorrect,
+                CorrectOptionId = correct.OptionId,
+                CorrectAnswer = correct.OptionText,
+            };
+        }).ToList();
         return Ok(result);
     }
+
+    [HttpGet("/api/getexamscore")]
+    public async Task<IActionResult> GetUserExamScore(int idUser, int idExam, int sectionId)
+    {
+        var question = await _context.ExamQuestions.AsNoTracking()
+            .Where(x => x.SectionId == sectionId)
+            .Select(x => new { x.QuestionId, x.Type })
+            .ToListAsync();
+        
+        var questionIds = question.Select(x => x.QuestionId);
+        
+        var questionDics = question.ToDictionary(x=>x.QuestionId, x=>x.Type);
+        var userResult = await _context.UserExamResults.AsNoTracking()
+            .Where(x => x.UserId == idUser && x.ExamId == idExam && x.SectionId == sectionId).ToListAsync();
+        int totalQuestion = question.Count();
+        int correctAnswer =  userResult.Count(x=>x.IsCorrect ==true);
+        int incorrectAnswer =  userResult.Count(x=>x.IsCorrect ==false);
+        var typeStats = question.GroupBy(x => x.Type).Select(x =>
+        {
+            var ids = x.Select(a => a.QuestionId).ToList();
+            var total = ids.Count;
+            var correctByType = userResult.Count(r => ids.Contains(r.QuestionId) && r.IsCorrect == true);
+            return new QuestionTypeStats()
+            {
+                Type = x.Key,
+                Total = total,
+                Correct = correctByType,
+                Incorrect = total - correctByType,
+            };
+        }).ToList();
+        var dto = new UserExamAnalyse()
+        {
+            SectionId = sectionId,
+            TotalQuestions = totalQuestion,
+            CorrectAnswers = correctAnswer,
+            IncorrectAnswers = incorrectAnswer,
+            PercentCorrect = Math.Round((double)correctAnswer / totalQuestion * 100, 1),
+            TypeStats = typeStats
+        };
+            return Ok(dto);
+
+    }
+  
     
 }
