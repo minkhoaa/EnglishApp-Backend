@@ -39,7 +39,7 @@ namespace EnglishApp.Data
 
         public DbSet<TempOtp> TempOtps { get; set; }
 
-        
+        public DbSet<ExamCategory>  ExamCategories { get; set; }
         
         public DbSet<Exam> Exams { get; set; }
         public DbSet<ExamSection> ExamSections { get; set; }
@@ -71,7 +71,13 @@ namespace EnglishApp.Data
             builder.Entity<ExamSection>().ToTable("examsections");
             builder.Entity<ExamQuestion>().ToTable("examquestions");
             builder.Entity<ExamOption>().ToTable("examoptions");
-
+            
+            builder.Entity<ExamCategory>().ToTable("examcategory");
+            builder.Entity<Exam>()
+                .HasOne(x => x.Category)
+                .WithMany(x => x.Exams)
+                .HasForeignKey(x => x.ExamCategoryId);
+            
             builder.Entity<ExamSection>()
                 .HasOne(x => x.Exam)
                 .WithMany(x => x.Sections)

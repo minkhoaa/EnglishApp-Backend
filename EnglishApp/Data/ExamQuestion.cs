@@ -11,7 +11,9 @@ public class ExamQuestion
     public int QuestionId { get; set; }
     public int SectionId { get; set; }
     public string QuestionText { get; set; } = null!;
-    public string Type { get; set; } = null!;           // 'fill-in-blank', 'multiple-choice'...
+    public string Type { get; set; } = null!; // 'fill-in-blank', 'multiple-choice'...
+    
+    public string? SampleImage { get; set; } = null!;
     public int SortOrder { get; set; }
     public ExamSection Section { get; set; } = null!;
     public ICollection<ExamOption>? Options { get; set; }

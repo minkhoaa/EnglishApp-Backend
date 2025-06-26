@@ -3,6 +3,7 @@ using System;
 using EnglishApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnglishApp.Migrations
 {
     [DbContext(typeof(EnglishAppDbContext))]
-    partial class EnglishAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250626034912_addExamcategory")]
+    partial class addExamcategory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,9 +96,6 @@ namespace EnglishApp.Migrations
                     b.Property<int>("ExamCategoryId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Image")
-                        .HasColumnType("text");
-
                     b.Property<string>("Level")
                         .HasColumnType("text");
 
@@ -173,9 +173,6 @@ namespace EnglishApp.Migrations
 
                     b.Property<string>("QuestionText")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SampleImage")
                         .HasColumnType("text");
 
                     b.Property<int>("SectionId")
