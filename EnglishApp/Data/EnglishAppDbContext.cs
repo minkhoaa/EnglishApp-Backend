@@ -46,7 +46,13 @@ namespace EnglishApp.Data
         public DbSet<ExamQuestion> ExamQuestions { get; set; }
         public DbSet<ExamOption> ExamOptions { get; set; }
         
+        public DbSet<WritingTest> WritingTests { get; set; }
+        
+        public DbSet<WritingExamContent> WritingExamContents { get; set; } = null!;
         public DbSet<UserExamResult> UserExamResults { get; set; }
+        
+        public DbSet<UserWritingHistory> UserWritingHistories { get; set; } = null!;
+        
         protected override void OnModelCreating(ModelBuilder builder) 
         {
             base.OnModelCreating(builder);
@@ -74,10 +80,20 @@ namespace EnglishApp.Data
             builder.Entity<ExamQuestion>().ToTable("examquestions");
             builder.Entity<ExamOption>().ToTable("examoptions");
             builder.Entity<UserExamResult>().ToTable("userexamresults");
-            
-            
-            
+            builder.Entity<WritingExamContent>().ToTable("writingexamcontent");
+            builder.Entity<WritingTest>().ToTable("writingtest");
+            builder.Entity<UserWritingHistory>().ToTable("userwritinghistory");
             builder.Entity<ExamCategory>().ToTable("examcategory");
+
+            builder.Entity<UserWritingHistory>()
+                .HasOne(x => x.User)
+                .WithMany(x => x.UserWritingHistories)
+                .HasForeignKey(x => x.UserId);
+            
+            builder.Entity<WritingExamContent>()
+                .HasOne(x => x.Tests)
+                .WithOne(x => x.ExamContent)
+                .HasForeignKey<WritingExamContent>(x => x.ExamId);
             
             builder.Entity<UserExamResult>()
                 .HasOne(x=>x.User)

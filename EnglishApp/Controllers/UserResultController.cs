@@ -87,7 +87,7 @@ public class UserResultController : ControllerBase
             .ToListAsync();
         
         var ids = userresult.Select(x=>x.QuestionId).Distinct().ToList();
-
+        var transcript =  await _context.ExamSections.AsNoTracking().Where(a=>a.ExamId == examId && a.SectionId == sectionId).Select(x=>x.Transcript).FirstOrDefaultAsync();
         var correctAnswers = await _context.ExamOptions
             .AsNoTracking()
             .Where(x => ids.Contains(x.QuestionId) && x.IsCorrect)
@@ -96,16 +96,16 @@ public class UserResultController : ControllerBase
         var result = userresult.Select(x =>
         {
             var correct = correctAnswers.FirstOrDefault(a => a.QuestionId == x.QuestionId);
-            return new DetailedResult()
+            return new DetailedResult
             {
-                UserAnswerId = x.UserExamResultId,
-                UserAnwser = x.AnswerText,
-                IsCorrect = x.IsCorrect,
-                CorrectOptionId = correct.OptionId,
-                CorrectAnswer = correct.OptionText,
+                    UserAnswerId = x.UserExamResultId,
+                    UserAnswer = x.AnswerText,
+                    IsCorrect = x.IsCorrect,
+                    CorrectOptionId = correct?.OptionId,
+                    CorrectAnswer = correct?.OptionText
             };
         }).ToList();
-        return Ok(result);
+        return Ok(new DetailedUserExamResult(){Transript = transcript, DetailedResults = result});
     }
 
     [HttpGet("/api/getexamscore")]
@@ -149,6 +149,49 @@ public class UserResultController : ControllerBase
             return Ok(dto);
 
     }
-  
+
+    [HttpGet("/api/getuserelisteningreadinghistory")]
+    public async Task<IActionResult> GetUserListeningReadingHistory(int userId)
+    {
+        var history = await _context.UserExamResults.AsNoTracking()
+            .Where(x => x.UserId == userId && x.IsSubmitted)
+            .GroupBy(x => new { x.ExamId, x.SectionId })
+            .Select(g => new
+            {
+                ExamId = g.Key.ExamId,
+                SectionId = g.Key.SectionId,
+                LatestAnsweredAt = g.Max(x => x.AnsweredAt),
+                TotalQuestions = g.Count(),
+                CorrectAnswers = g.Count(x => x.IsCorrect == true),
+                IncorrectAnswers = g.Count(x => x.IsCorrect == false)
+            })
+            .OrderByDescending(x => x.LatestAnsweredAt)
+            .ToListAsync();
+        var examIds = history.Select(h => h.ExamId).Distinct().ToList();
+        var examDict = await _context.Exams
+            .Where(e => examIds.Contains(e.ExamId))
+            .ToDictionaryAsync(e => e.ExamId, e => e.Title);
+
+        var sectionIds = history.Select(h => h.SectionId).Distinct().ToList();
+        var sectionDict = await _context.ExamSections
+            .Where(s => sectionIds.Contains(s.SectionId))
+            .ToDictionaryAsync(s => s.SectionId, s => s.Name);
+        var result = history.Select(h => new 
+        {
+            h.ExamId,
+            ExamTitle = examDict.ContainsKey(h.ExamId) ? examDict[h.ExamId] : null,
+            h.SectionId,
+            SectionName = h.SectionId != null && sectionDict.ContainsKey(h.SectionId.Value)
+                ? sectionDict[h.SectionId.Value]
+                : null, 
+            h.LatestAnsweredAt,
+            h.TotalQuestions,
+            h.CorrectAnswers,
+            h.IncorrectAnswers,
+            Score = Math.Round((double)h.CorrectAnswers / Math.Max(h.TotalQuestions,1) * 100, 1)
+        });
+
+        return Ok(result);
+    }
     
 }

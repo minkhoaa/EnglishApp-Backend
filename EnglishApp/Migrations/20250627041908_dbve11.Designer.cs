@@ -3,6 +3,7 @@ using System;
 using EnglishApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnglishApp.Migrations
 {
     [DbContext(typeof(EnglishAppDbContext))]
-    partial class EnglishAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250627041908_dbve11")]
+    partial class dbve11
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -802,19 +805,14 @@ namespace EnglishApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<double?>("EstimatedScore")
+                        .HasColumnType("double precision");
 
                     b.Property<int>("ExamId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("UserAnswer")
                         .IsRequired()

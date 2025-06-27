@@ -3,6 +3,7 @@ using System;
 using EnglishApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnglishApp.Migrations
 {
     [DbContext(typeof(EnglishAppDbContext))]
-    partial class EnglishAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250627032730_dbver11")]
+    partial class dbver11
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -790,46 +793,6 @@ namespace EnglishApp.Migrations
                     b.ToTable("usertokens", (string)null);
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.UserWritingHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AiFeedback")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("ExamId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserAnswer")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("userwritinghistory", (string)null);
-                });
-
             modelBuilder.Entity("EnglishApp.Data.WritingExamContent", b =>
                 {
                     b.Property<int>("Id")
@@ -1158,17 +1121,6 @@ namespace EnglishApp.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("EnglishApp.Data.UserWritingHistory", b =>
-                {
-                    b.HasOne("EnglishApp.Data.User", "User")
-                        .WithMany("UserWritingHistories")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("EnglishApp.Data.WritingExamContent", b =>
                 {
                     b.HasOne("EnglishApp.Data.WritingTest", "Tests")
@@ -1265,8 +1217,6 @@ namespace EnglishApp.Migrations
                         .IsRequired();
 
                     b.Navigation("UserRoles");
-
-                    b.Navigation("UserWritingHistories");
                 });
 
             modelBuilder.Entity("EnglishApp.Data.WritingTest", b =>

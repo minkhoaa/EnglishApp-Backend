@@ -10,7 +10,7 @@ public class DetailedUserExamResult
 public class DetailedResult
 {
     public int UserAnswerId { get; set; }
-    public string? UserAnwser  {get; set;}
+    public string? UserAnswer  {get; set;}
     public bool? IsCorrect {get; set;} 
     
     

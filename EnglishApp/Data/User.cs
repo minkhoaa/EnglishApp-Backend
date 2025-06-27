@@ -17,5 +17,7 @@ namespace EnglishApp.Data
         public ICollection<Deck>  Decks { get; set; } = null!;
         
         public ICollection<UserExamResult> UserExamResults { get; set; } = null!;
+        
+        public ICollection<UserWritingHistory> UserWritingHistories { get; set; } = null!;
     }
 }
