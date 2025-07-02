@@ -14,6 +14,7 @@ using System.Net.NetworkInformation;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.VisualBasic;
+using System.Threading.Tasks;
 
 namespace EnglishApp.Controllers
 {
@@ -67,42 +68,58 @@ namespace EnglishApp.Controllers
             return (!result.Success) ? NotFound(result) : Ok(result);
         }
         [HttpGet("signin-google")]
-        public IActionResult inGoogle(string returnUrl = "/api/Authentication/profile")
+        public IActionResult inGoogle([FromQuery] string redirectUrl = "myapp://auth-callback")
         {
-            var properties = new AuthenticationProperties { RedirectUri = returnUrl };
+         
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = "/api/Authentication/profile" 
+            };
+            properties.Items["redirectUrlGoogle"] = redirectUrl;
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
         [HttpGet("profile")]
         public async Task<IActionResult> Profile()
         {
+      
+            var authResult = await HttpContext.AuthenticateAsync();
+            var redirectUrl = authResult.Properties?.Items.ContainsKey("redirectUrlGoogle") == true
+                ? authResult.Properties.Items["redirectUrlGoogle"]
+                : "myapp://auth-callback"; 
+
             if (!User.Identity.IsAuthenticated)
             {
-                return Redirect("/auth/signin-google");
+
+                return Unauthorized(); 
             }
 
-            // Lấy thông tin từ claim của Google
-            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-            var name = User.FindFirst(ClaimTypes.Name)?.Value;
-
             var response = await _authentication.LoginWithGoogleAndFacebookAsync(User.Claims, "Google");
+            var token = response?.Data?.ToString();
 
-            return Ok(response);
+            var finalUrl = $"{redirectUrl}?access_token={token}";
+
+            return Redirect(finalUrl);
         }
 
+
         [HttpGet("login-facebook")]
-        public IActionResult LoginFacebook()
+        public IActionResult LoginFacebook([FromQuery] string redirectUrl = "myapp://auth-callback")
         {
             string returnUrl = "/signin-facebook";
             var pros = new AuthenticationProperties()
             {
                 RedirectUri = returnUrl,
             };
+            pros.Items["redirectUrlFacebook"] = redirectUrl;
             return Challenge(pros, FacebookDefaults.AuthenticationScheme);
         }
         [HttpGet("/signin-facebook")]
-        public IActionResult FacebookCallback()
+        public async Task<IActionResult> FacebookCallback()
         {
+            var authResult = await HttpContext.AuthenticateAsync();
+            var redirectUrl = authResult.Properties?.Items.ContainsKey("redirectUrlFacebook") == true
+                ? authResult.Properties.Items["redirectUrlFacebook"]
+                : "myapp://auth-callback";
             if (!User.Identity.IsAuthenticated)
                 return Unauthorized();
 
@@ -110,14 +127,12 @@ namespace EnglishApp.Controllers
             var name = User.FindFirst(ClaimTypes.Name)?.Value;
             var facebookId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
-            var response =  _authentication.LoginWithGoogleAndFacebookAsync(User.Claims, "Facebook");
-            return Ok(new
-            {
-                Message = "Đăng nhập Facebook thành công!",
-                FacebookId = facebookId,
-                Email = email,
-                Name = name
-            });
+            var response = await _authentication.LoginWithGoogleAndFacebookAsync(User.Claims, "Facebook");
+            var token = response?.Data?.ToString();
+
+            var finalUrl = $"{redirectUrl}?access_token={token}";
+
+            return Redirect(finalUrl);
         }
 
         [HttpGet("/getcurrentuserinfo")]

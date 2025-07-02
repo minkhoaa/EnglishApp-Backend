@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EnglishApp.Data;
+using EnglishApp.Dto.Request;
 using EnglishApp.Service;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,11 +15,13 @@ namespace EnglishApp.Controllers
         {
             private readonly IExerciseService _service;
             private readonly IExerciseOptionService _exerciseOptionService;
+            private readonly EnglishAppDbContext _context;
 
-            public ExerciseOptionController(IExerciseService service, IExerciseOptionService exerciseOptionService)
+            public ExerciseOptionController(IExerciseService service, IExerciseOptionService exerciseOptionService, EnglishAppDbContext context)
             {
                 _service = service; 
                 _exerciseOptionService = exerciseOptionService;
+                _context = context;
             }
 
             [HttpGet("/api/getallexercise")]
@@ -31,12 +34,44 @@ namespace EnglishApp.Controllers
             public async Task<IActionResult> GetAll(int lessonId)
                 => Ok(await _service.GetByLessonIdAsync(lessonId));
 
-            [HttpPost]
-            public async Task<IActionResult> Create(int exerciseId, ExerciseOption dto)
+            [HttpPost("/api/addcexercise")]
+            public async Task<IActionResult> Create(int LessonId,[FromBody] AddExerciseDto dto)
             {
-                dto.ExerciseId = exerciseId;
-                var o = await _exerciseOptionService.AddAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { exerciseId = exerciseId, id = o.OptionId }, o);
+               
+
+                // Bước 1: tạo và lưu Exercise
+                var exercise = new Exercise
+                {
+                    LessonId = LessonId,
+                    Type = dto.Exercise.Type,
+                    Question = dto.Exercise.Question,
+                    Explanation = dto.Exercise.Explanation,
+                    SortOrder = dto.Exercise.SortOrder,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Exercises.Add(exercise);
+                await _context.SaveChangesAsync(); // Bây giờ exercise.ExerciseId đã có giá trị thật
+
+// Bước 2: gán ExerciseId cho từng option
+                var options = dto.Options.Select(x => new ExerciseOption
+                {
+                    ExerciseId = exercise.ExerciseId, // ✅ đây là chỗ EF cần biết
+                    OptionText = x.OptionText,
+                    IsCorrect = x.IsCorrect,
+                    SortOrder = x.SortOrder
+                }).ToList();
+
+                _context.ExerciseOptions.AddRange(options);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    exercise.ExerciseId, 
+                    exercise.Question,
+                    options = exercise.ExerciseOptions.Select(x=> new {x.OptionId, x.OptionText, x.IsCorrect}).ToList()
+                });
             }
 
             [HttpGet("/api/exercise-options/{id}")]
@@ -69,3 +104,23 @@ namespace EnglishApp.Controllers
             }
         }
     }
+public class AddExerciseDto
+{
+    public AddNewExerciseDto Exercise { get; set; }
+    public List<AddNewExerciseOptionDto> Options { get; set; }
+}
+
+public class AddNewExerciseDto
+{
+    public string Type { get; set; }
+    public string Question { get; set; }
+    public string Explanation { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class AddNewExerciseOptionDto
+{
+    public string OptionText { get; set; }
+    public bool IsCorrect { get; set; }
+    public int SortOrder { get; set; }
+}

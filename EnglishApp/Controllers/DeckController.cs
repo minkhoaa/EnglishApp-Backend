@@ -75,13 +75,6 @@ public class DeckController :  ControllerBase
         return (result > 0) ? Ok(result) : NotFound();  
     }
 
-    [HttpDelete("api/deletedeck/{id}")]
-    public async Task<IActionResult> DeleteDeck(int id)
-    {
-        var result = await _deckRepository.DeleteDeck(id);
-        return (result > 0) ? Ok(result) : NotFound();
-    }
-
     [HttpPost("/api/savedeck")]
     [Authorize]
     public async Task<IActionResult> SaveDeck(int deckID)
@@ -133,5 +126,19 @@ public class DeckController :  ControllerBase
         var result = await _context.Decks.AsNoTracking()
             .Where(x => x.OwnerId == ownerId).ToListAsync();
         return Ok(result);
+    }
+    [HttpDelete("/api/deleteDeck/{id}")]
+    public async Task<IActionResult> DeleteDeck(int id) {
+        try
+        {
+            var result =  await _context.Decks.AsNoTracking().Where(x => x.Id == id).
+                ExecuteDeleteAsync();
+            return Ok(result); 
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message); 
+        }
+     
     }
 }

@@ -52,11 +52,26 @@ public class FlashCardService : IFlashCardRepository
         return result;
     }
 
-    public Task<int> DeleteAsync( int id)
+    public async Task<int> DeleteAsync( int id)
+
     {
-        var result = _context.FlashCards.AsNoTracking()
-            .Where(x => x.FlashcardId == id)
-            .ExecuteDeleteAsync();
-        return result; 
+        try
+        {
+            var result = await _context.FlashCards.AsNoTracking().FirstOrDefaultAsync(x => x.FlashcardId == id);
+            if (result != null)
+            {
+                await _context.Decks.Where(x => x.Id == result!.DeckId).ExecuteUpdateAsync(setter => setter
+                    .SetProperty(a => a.FlashCardNumber, a => a.FlashCardNumber -1 )
+                );
+                await _context.SaveChangesAsync();
+                return await _context.FlashCards.AsNoTracking().Where(x => x.FlashcardId == id).ExecuteDeleteAsync(); ;
+            }
+            throw new Exception("FlashCard not found"); 
+        }
+        catch (Exception a)
+        {
+            Console.WriteLine(a.Message);
+            throw;
+        }
     }
 }
